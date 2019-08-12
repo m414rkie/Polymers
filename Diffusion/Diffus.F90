@@ -4,219 +4,287 @@
 
 ! This version does not track chains, only beads
 
+! Second attempt. Reads files to determine number of timesteps total.
+! Reads in all positions at all times, runs a trace through the data.
+
+! Now with periodic boundary handling
+
 ! Author: Jon Parsons
 ! Date: 2-1-19
 
 program clusfinder
 
 implicit none
-	character*50			:: filename
+	character*50			:: file1, file2, file3
 	real				  		:: tstep
-	integer						:: numMols, numChains
-	integer						:: numTsteps, t_loc, t_glob
+	integer						:: numMols, numChains, file_track
+	integer						:: numTsteps, t_cur
+	integer						:: stride
 	integer						:: ioErr
 	integer						:: j
-	real,allocatable	:: molData(:,:) ! molnumber, moltype, x, y, z, cluster
-	real,allocatable	:: avg_pos(:,:,:) ! Holds average position of each mol. Mol number, x y z t, time step
-	real,allocatable	:: cur_pos(:,:,:) ! Holds current positions of each mol. Mol number, x y z t, time step
+	integer						:: mol_num
+	real							:: xmin, xmax, ymin, ymax, zmin, zmax
+	real							:: xlen, ylen, zlen
+	real							:: x, y, z
+	real							:: junk
+	real,allocatable	:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
 
 ! Number of chains in the system
 numChains = 2000
 
+write(*,*) "Please enter the desired stride."
+read(*,*) stride
+
 ! pict file input
-100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "Please enter the name of the file one."
 write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) filename
+read(*,*) file1
 
-filename = trim(filename)
+file1 = trim(file1)
 
-open(unit=15, file=filename, status="old", action="read", iostat=ioErr)
+write(*,*) "Please enter the name of the file two."
+write(*,*) "If the file is not in this directory enter the full path."
+read(*,*) file2
+
+file2 = trim(file2)
+
+write(*,*) "Please enter the name of the file three."
+write(*,*) "If the file is not in this directory enter the full path."
+read(*,*) file3
+
+file3 = trim(file3)
+
+! This section to determine the total number of timesteps and number of molecules
+numTsteps = 0
+t_cur = 0
+file_track = 1
+
+101 if (file_track .eq. 1) then
+			open(unit=15,file=file1,status="old",action="read")
+			write(*,*) "Reading file ", file1
+			file_track = 2
+		else if (file_track .eq. 2) then
+			close(15)
+			open(unit=15,file=file2,status="old",action="read")
+			write(*,*) "Reading file ", file2
+			file_track = 3
+		else if (file_track .eq. 3) then
+			close(15)
+			open(unit=15,file=file3,status="old",action="read")
+			write(*,*) "Reading file ", file3
+			file_track = 4
+		else if (file_track .eq. 4) then
+			close(15)
+			goto 102
+		end if
+
+! Reads in the data and calls the clustering subroutine
+read_loop: do
+
+	read(15,*,END=101)
+	read(15,*)
+	read(15,*)
+	read(15,*) numMols
+	read(15,*)
+	read(15,*) xmin, xmax
+	read(15,*) ymin, ymax
+	read(15,*) zmin, zmax
+	read(15,*)
+
+	numTsteps = numTsteps + 1
+
+	! Read in molecule data
+	file_read: do j = 1, numMols, 1
+
+		read(15,*)
+
+	end do file_read
+
+end do read_loop
+
+102 write(*,*) "Number of timesteps found:", numTsteps
+
+xlen = xmax - xmin
+ylen = ymax - ymin
+zlen = zmax - zmin
+
+! Allocate master array
+allocate(mast_arr(numMols,3,numTsteps), stat=ioErr)
 
 if (ioErr .ne. 0) then
-	write(*,*) "File not found, please try again."
-	goto 100
+	write(*,*) "Allocation of master array has failed. Exiting"
+	stop
 end if
 
-numTsteps = 0
-t_loc = 0
-t_glob = 0
+! Read in the data to master array
+
+file_track = 1
+
+103 if (file_track .eq. 1) then
+			open(unit=15,file=file1,status="old",action="read")
+			write(*,*) "Taking data from file 1"
+			file_track = 2
+		else if (file_track .eq. 2) then
+			close(15)
+			open(unit=15,file=file2,status="old",action="read")
+			write(*,*) "Taking data from file 2"
+			file_track = 3
+		else if (file_track .eq. 3) then
+			close(15)
+			open(unit=15,file=file3,status="old",action="read")
+			write(*,*) "Taking data from file 3"
+			file_track = 4
+		else if (file_track .eq. 4) then
+			close(15)
+			goto 104
+		end if
 
 ! Reads in the data and calls the clustering subroutine
 out_loop: do
 
-	read(15,*,END=101)
+	read(15,*,END=103)
 	read(15,*) tstep
 	read(15,*)
 	read(15,*) numMols
-	read(15,*); read(15,*); read(15,*); read(15,*); read(15,*);
+	read(15,*); read(15,*);
+	read(15,*); read(15,*); read(15,*);
 
-	if (numTsteps .eq. 0) then
-		allocate(avg_pos(numMols,4,1000), stat = ioErr)
-
-		if (ioErr .ne. 0) then
-			write(*,*) "Failed to allocate average position array. Exiting at timestep", tstep
-			stop
-		end if
-
-		avg_pos = 0.0
-
-	end if
-
-	allocate(cur_pos(numMols,4,10), stat = ioErr)
-
-	if (ioErr .ne. 0) then
-		write(*,*) "Failed to allocate temp. position array."
-		stop
-	end if
-
-	cur_pos = 0.0
-
-	numTsteps = numTsteps + 1
-	t_loc = t_loc + 1
-
-	allocate(molData(numMols,5), stat = ioErr)
-
-	if (ioErr .ne. 0) then
-		write(*,*) "Failed to allocated primary array. Exiting at timestep", tstep
-		stop
-	end if
-
-	write(*,*) "Beginning time:", tstep
-
-	! Initial values, to be over-ridden
-	molData = -1.0
+	t_cur = t_cur + 1
 
 	! Read in molecule data
-	fileread: do j = 1, numMols, 1
+	file_in: do j = 1, numMols, 1
 
-		read(15,*) molData(j,1), molData(j,2), molData(j,3), molData(j,4), molData(j,5)
+		read(15,*) mol_num, junk, x, y, z
+		mast_arr(mol_num,1,t_cur) = x
+		mast_arr(mol_num,2,t_cur) = y
+		mast_arr(mol_num,3,t_cur) = z
 
-	end do fileread
-
-	pos_save: do j = 1, numMols, 1
-
-		cur_pos(nint(molData(j,1)),1,t_loc) = molData(j,3) ! x
-		cur_pos(nint(molData(j,1)),2,t_loc) = molData(j,4) ! y
-		cur_pos(nint(molData(j,1)),3,t_loc) = molData(j,5) ! z
-		cur_pos(nint(molData(j,1)),4,t_loc) = tstep ! time
-
-	end do pos_save
-
-	deallocate(molData)
-
-	if (t_loc .eq. 10) then
-		write(*,*) "Averaging"
-		t_glob = t_glob + 1
-		call cur_average(numMols,4,10,1000,t_glob,cur_pos,avg_pos)
-		write(*,*) "Averaging Complete"
-		t_loc = 0
-	end if
-
-	deallocate(cur_pos)
+	end do file_in
 
 end do out_loop
 
-101 write(*,*) "Number of timesteps checked:", numTsteps
+! See that counted timesteps match
+104 if (t_cur .ne. numTsteps) then
+			write(*,*) "Number of timsteps found does not match number of steps of &
+							&		data recorded."
+			stop
+		end if
 
-write(*,*) "Finalizing output"
-call disp_out(numMols,4,1000,avg_pos,t_glob)
+write(*,*) "Number of data elements not read: ", count(mast_arr .eq. 0)
+write(*,*) "Data read. Beginning diffusion."
 
-write(*,*) "End of input file reached. Goodbye"
+call diffuse(numMols,3,numTsteps,mast_arr,stride,xlen,ylen,zlen)
 
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine cur_average(dim1,dim2_pos,dim3_loc,dim3_glob,t_cur,arr_cur,arr_glob)
-! Subroutine takes ten posisions, averages them and saves to arr_glob
-
-implicit none
-	integer, intent(in)			:: dim1, dim2_pos, dim3_loc, dim3_glob
-	integer, intent(in)			:: t_cur
-	real, intent(inout)			:: arr_cur(dim1,dim2_pos,dim3_loc)
-	real, intent(inout)			:: arr_glob(dim1,dim2_pos,dim3_glob)
-
-integer			:: i, j
-
-
-! Average positions
-mol_loop : do i = 1, dim1, 1
-
-	avg_loop : do j = 1, dim3_loc, 1
-
-				arr_glob(i,1,t_cur) = arr_glob(i,1,t_cur) + arr_cur(i,1,j) ! x
-				arr_glob(i,2,t_cur) = arr_glob(i,2,t_cur) + arr_cur(i,2,j) ! y
-				arr_glob(i,3,t_cur) = arr_glob(i,3,t_cur) + arr_cur(i,3,j) ! z
-				arr_glob(i,4,t_cur) = arr_glob(i,4,t_cur) + arr_cur(i,4,j) ! t
-
-	end do avg_loop
-
-	arr_glob(i,1,t_cur) = arr_glob(i,1,t_cur)/10.0 ! x
- 	arr_glob(i,2,t_cur) = arr_glob(i,2,t_cur)/10.0 ! y
-	arr_glob(i,3,t_cur) = arr_glob(i,3,t_cur)/10.0 ! z
-	arr_glob(i,4,t_cur) = arr_glob(i,4,t_cur)/10.0 ! t
-
-end do mol_loop
-
-end subroutine
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine disp_out(dim1,dim2,dim3,arrin,t_count)
-! Finalization subroutine. Finds displacement on average, as well as maximal
-! displacement
+subroutine diffuse(dim1,dim2,dim3,arr_in,strd,xbx,ybx,zbx)
+! Subroutine to find displacement of molecules. Finds average as well
+! Periodic boundary handling
 
 use functions
 
 implicit none
-	integer, intent(in) 	:: dim1, dim2, dim3
-	integer, intent(in)		:: t_count
-	real, intent(in)			:: arrin(dim1,dim2,dim3) ! molnum, xyzt, timestep
+	integer,intent(in)		:: dim1, dim2, dim3
+	integer,intent(in)		:: strd
+	real,intent(in)				:: xbx, ybx, zbx
+	real,intent(in)				:: arr_in(dim1,dim2,dim3)
 
-	integer		:: i, j
-	real			:: disp_avg, disp_max
-	real			:: disp_avg_all
-	real			:: disp_cur
+	integer								:: i, j
+	integer								:: num_pts
+	real									:: disp, disp_avg, disp_max
+	real									:: disp_glob_avg, disp_arr(dim3)
+	real									:: x1, x2, y1, y2, z1, z2
+	real									:: xd, yd, zd
+	integer								:: max_mol
+
+	character*12					:: filename
+
+filename = "diff_out.dat"
+open(unit=16,file=filename,status="unknown",position="append")
+write(16,*) "Step Avg_disp Max_disp Max_mol"
 
 
-disp_max = 0.0
-disp_avg_all = 0.0
+disp_arr = 0.0
+num_pts = 0
 
-open(unit=16,file="displacement.dat",status="unknown",position="append")
-open(unit=17,file="maxdisplacement.dat",status="unknown",position="append")
+time_loop: do i = 1, dim3, 1
 
-time_loop : do i = 1, t_count, 1
-
-	disp_max = 0.0
-	disp_avg = 0.0
-
-	mol_loop : do j = 1, dim1, 1
-
-		disp_cur = dist(arrin(j,1,i),arrin(j,2,i),arrin(j,3,i), &
-										arrin(j,1,i+1),arrin(j,2,i+1),arrin(j,3,i+1))
-
-		disp_avg = disp_avg + disp_cur
-
-		if (disp_cur .gt. disp_max) then
-			disp_max = disp_cur
+		if ((i+strd) .gt. dim3) then
+			exit time_loop
 		end if
 
-	end do mol_loop
+		num_pts = num_pts + 1
 
-	disp_avg = disp_avg/float(dim1)
-	disp_avg_all = disp_avg_all + disp_avg
+		disp_avg = 0.0
+		disp_max = 0.0
 
+		coord_loop: do j = 1, dim1, 1
 
-	write(16,*) arrin(1,4,i), disp_avg
-	write(17,*) arrin(1,4,i), disp_max
+			x1 = arr_in(j,1,i)
+			x2 = arr_in(j,1,i+strd)
+			y1 = arr_in(j,2,i)
+			y2 = arr_in(j,2,i+strd)
+			z1 = arr_in(j,3,i)
+			z2 = arr_in(j,3,i+strd)
+
+			! Axial distances traveled
+			xd = (x2 - x1)
+			yd = (y2 - y1)
+			zd = (z2 - z1)
+
+			! Account for periodic boundaries
+			! X
+			if (abs(xd) .ge. xbx) then
+				if (xd .gt. 0) then
+						xd = xd - xbx
+				else
+						xd = xd + xbx
+				end if
+			end if
+			! Y
+			if (abs(yd) .ge. ybx) then
+				if (yd .gt. 0) then
+					yd = yd - ybx
+				else
+					yd = yd + ybx
+				end if
+			end if
+			! Z
+			if (abs(zd) .ge. zbx) then
+				if (zd .gt. 0) then
+					zd = zd - zbx
+				else
+					zd = zd + zbx
+				end if
+			end if
+			! Determine
+			disp = dist(xd,yd,zd)
+
+			if (disp .gt. disp_max) then
+				max_mol = j
+				disp_max = disp
+			end if
+
+			disp_avg = disp_avg + disp
+
+		end do coord_loop
+
+		disp_avg = disp_avg/float(dim1)
+
+		write(16,*) i, disp_avg, disp_max, max_mol
+		disp_arr(i) = disp_avg
 
 end do time_loop
 
-disp_avg_all = disp_avg_all/float(t_count)
+write(*,*) "Number of points checked:", num_pts
+write(*,*) "Total number of timesteps:", dim3
 
-write(16,*) "Total_disp", disp_avg_all
+disp_glob_avg = sum(disp_arr)/float(dim3)
+
+write(16,*) "Total average displacement: ", disp_glob_avg
 
 close(16)
-close(17)
 
 end subroutine
