@@ -4,8 +4,10 @@
 
 ! This version does not track chains, only beads
 
-! Second attempt. Reads files to determine number of timesteps total.
-! Reads in all positions at all times, runs a trace through the data.
+! Version 3
+! - Reads indefinite number of files, user will supply the number and names
+! 	of the datafiles.
+! - Iterates over the stride to output data as avg diffusion - time (tau)
 
 ! Now with periodic boundary handling
 
@@ -15,68 +17,47 @@
 program clusfinder
 
 implicit none
-	character*50			:: file1, file2, file3
-	real				  		:: tstep
-	integer						:: numMols, numChains, file_track
-	integer						:: numTsteps, t_cur
-	integer						:: stride
-	integer						:: ioErr
-	integer						:: j
-	integer						:: mol_num
-	real							:: xmin, xmax, ymin, ymax, zmin, zmax
-	real							:: xlen, ylen, zlen
-	real							:: x, y, z
-	real							:: junk
-	real,allocatable	:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
+	character*50,allocatable	:: file_arr(:)
+	character*50							:: raw_in
+	real				  						:: tstep
+	integer										:: numMols, numChains
+	integer										:: numTsteps, t_cur
+	integer										:: num_files
+	integer										:: ioErr
+	integer										:: i, j
+	integer										:: mol_num
+	real											:: xmin, xmax, ymin, ymax, zmin, zmax
+	real											:: xlen, ylen, zlen
+	real											:: x, y, z
+	real											:: junk
+	real,allocatable					:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
 
 ! Number of chains in the system
 numChains = 2000
 
-write(*,*) "Please enter the desired stride."
-read(*,*) stride
+write(*,*) "Please enter the number of files."
+read(*,*) num_files
 
-! pict file input
-write(*,*) "Please enter the name of the file one."
-write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) file1
+allocate(file_arr(num_files), stat=ioErr)
+if (ioErr .ne. 0) then
+	write(*,*) "Allocation of file name array has failed. Exiting"
+	stop
+end if
 
-file1 = trim(file1)
 
-write(*,*) "Please enter the name of the file two."
-write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) file2
-
-file2 = trim(file2)
-
-write(*,*) "Please enter the name of the file three."
-write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) file3
-
-file3 = trim(file3)
+file_in: do i = 1, num_files, 1
+	write(*,*) "Please enter the name of file", i
+	read(*,*) raw_in
+	file_arr(i) = trim(raw_in)
+end do file_in
 
 ! This section to determine the total number of timesteps and number of molecules
 numTsteps = 0
 t_cur = 0
-file_track = 1
 
-101 if (file_track .eq. 1) then
-			open(unit=15,file=file1,status="old",action="read")
-			write(*,*) "Reading file ", file1
-			file_track = 2
-		else if (file_track .eq. 2) then
-			close(15)
-			open(unit=15,file=file2,status="old",action="read")
-			write(*,*) "Reading file ", file2
-			file_track = 3
-		else if (file_track .eq. 3) then
-			close(15)
-			open(unit=15,file=file3,status="old",action="read")
-			write(*,*) "Reading file ", file3
-			file_track = 4
-		else if (file_track .eq. 4) then
-			close(15)
-			goto 102
-		end if
+file_iter_time: do i = 1, num_files, 1
+			open(unit=15,file=file_arr(i),status="old",action="read")
+			write(*,*) "Reading file ", file_arr(i)
 
 ! Reads in the data and calls the clustering subroutine
 read_loop: do
@@ -102,7 +83,11 @@ read_loop: do
 
 end do read_loop
 
-102 write(*,*) "Number of timesteps found:", numTsteps
+101 close(15)
+
+end do file_iter_time
+
+write(*,*) "Number of timesteps found:", numTsteps
 
 xlen = xmax - xmin
 ylen = ymax - ymin
@@ -118,26 +103,10 @@ end if
 
 ! Read in the data to master array
 
-file_track = 1
 
-103 if (file_track .eq. 1) then
-			open(unit=15,file=file1,status="old",action="read")
-			write(*,*) "Taking data from file 1"
-			file_track = 2
-		else if (file_track .eq. 2) then
-			close(15)
-			open(unit=15,file=file2,status="old",action="read")
-			write(*,*) "Taking data from file 2"
-			file_track = 3
-		else if (file_track .eq. 3) then
-			close(15)
-			open(unit=15,file=file3,status="old",action="read")
-			write(*,*) "Taking data from file 3"
-			file_track = 4
-		else if (file_track .eq. 4) then
-			close(15)
-			goto 104
-		end if
+file_iter_main: do i = 1, num_files, 1
+			open(unit=15,file=file_arr(i),status="old",action="read")
+			write(*,*) "Taking data from file", file_arr(i)
 
 ! Reads in the data and calls the clustering subroutine
 out_loop: do
@@ -152,34 +121,38 @@ out_loop: do
 	t_cur = t_cur + 1
 
 	! Read in molecule data
-	file_in: do j = 1, numMols, 1
+	data_in: do j = 1, numMols, 1
 
 		read(15,*) mol_num, junk, x, y, z
 		mast_arr(mol_num,1,t_cur) = x
 		mast_arr(mol_num,2,t_cur) = y
 		mast_arr(mol_num,3,t_cur) = z
 
-	end do file_in
+	end do data_in
 
 end do out_loop
 
+103 close(15)
+
+end do file_iter_main
+
 ! See that counted timesteps match
-104 if (t_cur .ne. numTsteps) then
-			write(*,*) "Number of timsteps found does not match number of steps of &
-							&		data recorded."
-			stop
-		end if
+if (t_cur .ne. numTsteps) then
+	write(*,*) "Number of timsteps found does not match number of steps of &
+					&		data recorded."
+	stop
+end if
 
 write(*,*) "Number of data elements not read: ", count(mast_arr .eq. 0)
-write(*,*) "Data read. Beginning diffusion."
+write(*,*) "Data read. Beginning diffusion calculations."
 
-call diffuse(numMols,3,numTsteps,mast_arr,stride,xlen,ylen,zlen)
+call diffuse(numMols,3,numTsteps,mast_arr,xlen,ylen,zlen)
 
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine diffuse(dim1,dim2,dim3,arr_in,strd,xbx,ybx,zbx)
+subroutine diffuse(dim1,dim2,dim3,arr_in,xbx,ybx,zbx)
 ! Subroutine to find displacement of molecules. Finds average as well
 ! Periodic boundary handling
 
@@ -187,47 +160,65 @@ use functions
 
 implicit none
 	integer,intent(in)		:: dim1, dim2, dim3
-	integer,intent(in)		:: strd
 	real,intent(in)				:: xbx, ybx, zbx
 	real,intent(in)				:: arr_in(dim1,dim2,dim3)
 
-	integer								:: i, j
+	integer								:: stride, tau
+	integer								:: max_tau, max_stride
+	integer								:: stride_iter
+	integer								:: i, j, k
 	integer								:: num_pts
+	real									:: disp_avg_co, disp_avg_ti
 	real									:: disp, disp_avg, disp_max
-	real									:: disp_glob_avg, disp_arr(dim3)
+	real									:: disp_glob_avg
 	real									:: x1, x2, y1, y2, z1, z2
 	real									:: xd, yd, zd
 	integer								:: max_mol
 
 	character*12					:: filename
 
+write(*,*) "Please enter the maximum tau to be tested"
+read(*,*) max_tau
+
+! Each timestep is 50 tau
+max_stride = max_tau/50
+
+stride_iter = max_stride/30
+
 filename = "diff_out.dat"
 open(unit=16,file=filename,status="unknown",position="append")
-write(16,*) "Step Avg_disp Max_disp Max_mol"
+write(16,*) "tau	R^2"
 
-
-disp_arr = 0.0
 num_pts = 0
+disp_avg_co = 0.0
+disp_avg_ti = 0.0
+disp_avg = 0.0
+
+iter_stride: do k = 1, max_stride, stride_iter
+
+	stride = k
+	tau = 50*stride
+	disp_avg_ti = 0.0
 
 time_loop: do i = 1, dim3, 1
 
-		if ((i+strd) .gt. dim3) then
+		if ((i+stride) .gt. dim3) then
 			exit time_loop
 		end if
 
 		num_pts = num_pts + 1
 
-		disp_avg = 0.0
+		disp_avg_co = 0.0
 		disp_max = 0.0
 
 		coord_loop: do j = 1, dim1, 1
 
 			x1 = arr_in(j,1,i)
-			x2 = arr_in(j,1,i+strd)
+			x2 = arr_in(j,1,i+stride)
 			y1 = arr_in(j,2,i)
-			y2 = arr_in(j,2,i+strd)
+			y2 = arr_in(j,2,i+stride)
 			z1 = arr_in(j,3,i)
-			z2 = arr_in(j,3,i+strd)
+			z2 = arr_in(j,3,i+stride)
 
 			! Axial distances traveled
 			xd = (x2 - x1)
@@ -267,23 +258,19 @@ time_loop: do i = 1, dim3, 1
 				disp_max = disp
 			end if
 
-			disp_avg = disp_avg + disp
+			disp_avg_co = disp_avg_co + disp
 
 		end do coord_loop
 
-		disp_avg = disp_avg/float(dim1)
-
-		write(16,*) i, disp_avg, disp_max, max_mol
-		disp_arr(i) = disp_avg
+		disp_avg_co = disp_avg_co/float(dim1)
+		disp_avg_ti = disp_avg_ti + disp_avg_co
 
 end do time_loop
 
-write(*,*) "Number of points checked:", num_pts
-write(*,*) "Total number of timesteps:", dim3
+	disp_avg_ti = disp_avg_ti/float(dim3)
+	write(16,*) tau, disp_avg_ti**2
 
-disp_glob_avg = sum(disp_arr)/float(dim3)
-
-write(16,*) "Total average displacement: ", disp_glob_avg
+end do iter_stride
 
 close(16)
 

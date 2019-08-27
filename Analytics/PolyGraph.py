@@ -1,24 +1,56 @@
 #!/usr/bin/python3
-
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import numpy as np
 import os
+import math
+import csv
+import subprocess
+import statistics
 
 # Plotting for various outputs of the polymers set.
+# Outputs the data in x-y format with no headers
+
 
 # Jon Parsons
 # 8-1-19
 
 ################################################################################
 
-## Function for rolling average
+# Function for average
+def ave(lst):
+    tot = 0
+    for i in lst:
+        tot += i
 
-def roll_avg(x, n):
-    sum = np.cumsum(np.insert(x,0,0))
-    return (sum[n:] - sum[:-n])/float(n)
+    ave = tot/len(lst)
+    return ave
 
-## find which runs to analise
+# Function for std. deviation
+def stdv(lst,ave):
+    sum = 0
+    for i in lst:
+        sum += (i - ave)*(i - ave)
+
+    sum = sum/len(lst)
+
+    stddev = math.sqrt(sum)
+    return stddev
+
+# Function for running average
+def run_avg(lst):
+    run_avg = []
+    N = 1
+    sum = 0
+    for i in lst:
+        sum += i
+        ave = sum/N
+        run_avg.append(ave)
+        N += 1
+
+    return run_avg
+
+
+################################################################################
+
+## find which runs to analyse
 
 runs = []
 dirs = []
@@ -46,9 +78,10 @@ for i in runs:
 
 dir_master = os.getcwd()
 
-time = []
+################################################################################
+
+time = [0]
 perc = []
-per_rsum = []
 
 ## Percentages ##
 for i in dirs:
@@ -66,37 +99,28 @@ for i in dirs:
 
     for line in perdat:
         xy = line.split()
-        time.append(float(xy[0]))
+        time.append(time[-1]+1000)
         perc.append(float(xy[1]))
+
     os.chdir(dir_master)
 
+time.pop(0)
 
-sz = len(perc) - 1
-for i in range(1,sz):
-    x1 = perc[i]
-    x2 = perc[i+1]
-    avg = (x1 + x2)/2
-    per_rsum.append(avg)
+perc_ave = run_avg(perc)
 
-# Plot stuff
-plt.plot(time,perc)
-plt.plot(time[1:sz],per_rsum)
-plt.legend(['Percentage','Average'])
-plt.xlabel('Time')
-plt.ylabel('Percentage of Chains')
-plt.title('Percentage of Chains \n in a Cluster')
-plt.savefig('Percentage.png')
+perc_out = "perc_grace.dat"
+out = open(perc_out,'w')
 
-plt.clf()
+writer = csv.writer(out, delimiter='\t')
+writer.writerows(zip(time,perc,perc_ave))
 
-os.chdir(dir_master)
+out.close()
 
 ################################################################################
 
 ##  Networkness ##
 
 network = []
-netsum = []
 
 for i in dirs:
 
@@ -111,45 +135,31 @@ for i in dirs:
 
     # Convert to graphable form
     ## Time array read in from percentages
-
     netdat.pop(-1)
     netdat.pop(-1)
 
     for line in netdat:
         xy = line.split()
         network.append(float(xy[2]))
+
     os.chdir(dir_master)
 
-netsum.append(0)
-sz = len(network) - 1
-for i in range(1,sz):
-    x1 = netsum[-1] + network[i]
-    x2 = network[i+1]
-    avg = (x1 + x2)/i
-    netsum.append(avg)
+net_ave = run_avg(network)
 
-netsum.pop(0)
-# Plot stuff
-plt.plot(time,network)
-plt.plot(time[1:sz],netsum)
-plt.legend(['Networkness','Average'])
-plt.xlabel('Time')
-plt.ylabel('Networkness')
-plt.title('Network Ratio')
+net_out = "net_grace.dat"
+out = open(net_out,'w')
 
-plt.savefig('Networkness.png')
+writer = csv.writer(out, delimiter='\t')
+writer.writerows(zip(time,network,net_ave))
 
-plt.clf()
+out.close()
 
-os.chdir(dir_master)
 
 ################################################################################
 
 ## Hbonds over time
 
 hbnd = []
-time = []
-hbnd_rsum = []
 
 for i in dirs:
 
@@ -167,32 +177,21 @@ for i in dirs:
 
     for line in hbnddat:
         xy = line.split()
-        time.append(float(xy[0]))
         hbnd.append(float(xy[1]))
 
     os.chdir(dir_master)
 
 
-sz = len(hbnd) - 1
-for i in range(1,sz):
-    x1 = hbnd[i]
-    x2 = hbnd[i+1]
-    avg = (x1 + x2)/2
-    hbnd_rsum.append(avg)
+hbnd_out = "hbnd_grace.dat"
+out = open(hbnd_out,'w')
 
-# Plot stuff
-plt.plot(time,hbnd)
-plt.plot(time[1:sz],hbnd_rsum)
-plt.legend(['H-bonds','Average'])
-plt.xlabel('Time')
-plt.ylabel('Number of H-Bonds')
-plt.title('Number of Hydrogen Bonds over Time')
+hbnd_ave = run_avg(hbnd)
 
-plt.savefig('Hbonds.png')
 
-plt.clf()
+writer = csv.writer(out, delimiter='\t')
+writer.writerows(zip(time,hbnd,hbnd_ave))
 
-os.chdir(dir_master)
+out.close()
 
 ################################################################################
 
@@ -231,52 +230,57 @@ for i in dirs:
     avg = []
     stdev = []
 
-    two = hhist[2::10]
-    three = hhist[3::10]
-    four = hhist[4::10]
-    five = hhist[5::10]
-    six = hhist[6::10]
-    seven = hhist[7::10]
-    eight = hhist[8::10]
-    nine = hhist[9::10]
-    ten = hhist[10::10]
+    two = hhist[1::10]
+    three = hhist[2::10]
+    four = hhist[3::10]
+    five = hhist[4::10]
+    six = hhist[5::10]
+    seven = hhist[6::10]
+    eight = hhist[7::10]
+    nine = hhist[8::10]
+    ten = hhist[9::10]
 
-    avg.append(np.mean(two))
-    avg.append(np.mean(three))
-    avg.append(np.mean(four))
-    avg.append(np.mean(five))
-    avg.append(np.mean(six))
-    avg.append(np.mean(seven))
-    avg.append(np.mean(eight))
-    avg.append(np.mean(nine))
-    avg.append(np.mean(ten))
+    avg.append(ave(two))
+    avg.append(ave(three))
+    avg.append(ave(four))
+    avg.append(ave(five))
+    avg.append(ave(six))
+    avg.append(ave(seven))
+    avg.append(ave(eight))
+    avg.append(ave(nine))
+    avg.append(ave(ten))
 
-    stdev.append(np.std(two))
-    stdev.append(np.std(three))
-    stdev.append(np.std(four))
-    stdev.append(np.std(five))
-    stdev.append(np.std(six))
-    stdev.append(np.std(seven))
-    stdev.append(np.std(eight))
-    stdev.append(np.std(nine))
-    stdev.append(np.std(ten))
+#    stdev.append(stdv(two,avg[0]))
+#    stdev.append(stdv(three,avg[1]))
+#    stdev.append(stdv(four,avg[2]))
+#    stdev.append(stdv(five,avg[3]))
+#    stdev.append(stdv(six,avg[4]))
+#    stdev.append(stdv(seven,avg[5]))
+#    stdev.append(stdv(eight,avg[6]))
+#    stdev.append(stdv(nine,avg[7]))
+#    stdev.append(stdv(ten,avg[8]))
+    stdev.append(statistics.pstdev(two))
+    stdev.append(statistics.pstdev(three))
+    stdev.append(statistics.pstdev(four))
+    stdev.append(statistics.pstdev(five))
+    stdev.append(statistics.pstdev(six))
+    stdev.append(statistics.pstdev(seven))
+    stdev.append(statistics.pstdev(eight))
+    stdev.append(statistics.pstdev(nine))
+    stdev.append(statistics.pstdev(ten))
 
-    N = 9
-    width = 0.2
-    ind = np.arange(N)
 
     os.chdir(dir_master)
 
+boxes = list(range(2,10))
 
-plt.bar(ind,avg,width,yerr=stdev)
+hist_out = "hist_grace.dat"
+out = open(hist_out,'w')
 
-plt.ylabel('Number of Clusters')
-plt.xticks(ind,box)
-plt.xlabel('Number of Beads')
-plt.title('Average Number of Hbond Clusters of Size:')
+writer = csv.writer(out, delimiter='\t')
+writer.writerows(zip(boxes,avg,perc))
 
-plt.savefig('hbond_hist.png')
+out.close()
 
-plt.clf()
-
-os.chdir(dir_master)
+subprocess.call("mkdir -p ~/GraceData/", shell=True, executable='/bin/bash')
+subprocess.call("mv *.dat GraceData/", shell=True, executable='/bin/bash')
