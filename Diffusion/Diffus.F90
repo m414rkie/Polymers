@@ -14,13 +14,13 @@
 ! Author: Jon Parsons
 ! Date: 2-1-19
 
-program clusfinder
+program diffusion
 
 implicit none
 	character*50,allocatable	:: file_arr(:)
 	character*50							:: raw_in
 	real				  						:: tstep
-	integer										:: numMols, numChains
+	integer										:: numMols
 	integer										:: numTsteps, t_cur
 	integer										:: num_files
 	integer										:: ioErr
@@ -31,9 +31,6 @@ implicit none
 	real											:: x, y, z
 	real											:: junk
 	real,allocatable					:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
-
-! Number of chains in the system
-numChains = 2000
 
 write(*,*) "Please enter the number of files."
 read(*,*) num_files
@@ -101,6 +98,8 @@ if (ioErr .ne. 0) then
 	stop
 end if
 
+mast_arr = -1000.0
+
 ! Read in the data to master array
 
 
@@ -143,7 +142,7 @@ if (t_cur .ne. numTsteps) then
 	stop
 end if
 
-write(*,*) "Number of data elements not read: ", count(mast_arr .eq. 0)
+write(*,*) "Number of data elements not read: ", count(mast_arr .eq. -1000.0)
 write(*,*) "Data read. Beginning diffusion calculations."
 
 call diffuse(numMols,3,numTsteps,mast_arr,xlen,ylen,zlen)
@@ -159,116 +158,102 @@ subroutine diffuse(dim1,dim2,dim3,arr_in,xbx,ybx,zbx)
 use functions
 
 implicit none
-	integer,intent(in)		:: dim1, dim2, dim3
-	real,intent(in)				:: xbx, ybx, zbx
-	real,intent(in)				:: arr_in(dim1,dim2,dim3)
+	integer,intent(in)		:: dim1, dim2, dim3 ! num. beads, xyz,num T steps
+	real,intent(in)				:: xbx, ybx, zbx ! Box dimensions
+	real,intent(in)				:: arr_in(dim1,dim2,dim3) ! master array
 
-	integer								:: stride, tau
-	integer								:: max_tau, max_stride
-	integer								:: stride_iter
-	integer								:: i, j, k
-	integer								:: num_pts
-	real									:: disp_avg_co, disp_avg_ti
+	integer								:: stride, tau ! length of time, LJ time steps
+	integer								:: max_tau, max_stride ! Boundaries
+	integer								:: stride_iter ! Amt. to update stride
+	integer								:: i, j, k ! Looping integers
+	real									:: disp_avg_co, disp_avg_ti ! avg for beads, time resp.
 	real									:: disp, disp_avg, disp_max
-	real									:: disp_glob_avg
 	real									:: x1, x2, y1, y2, z1, z2
-	real									:: xd, yd, zd
-	integer								:: max_mol
+	real									:: xd, yd, zd ! Axial distances
+	integer								:: max_mol ! Bead with most displacement
 
 	character*12					:: filename
 
-write(*,*) "Please enter the maximum tau to be tested"
-read(*,*) max_tau
-
+max_tau = 50*dim3
+write(*,*) "Largest Tau available:", max_tau
 ! Each timestep is 50 tau
-max_stride = max_tau/50
+max_stride = dim3/50
 
-stride_iter = max_stride/30
+stride_iter = max_stride/10
 
 filename = "diff_out.dat"
 open(unit=16,file=filename,status="unknown",position="append")
-write(16,*) "tau	R^2"
 
-num_pts = 0
 disp_avg_co = 0.0
 disp_avg_ti = 0.0
 disp_avg = 0.0
 
+! Iterate through time differences
 iter_stride: do k = 1, max_stride, stride_iter
 
 	stride = k
 	tau = 50*stride
 	disp_avg_ti = 0.0
+	write(*,*) "Calculating for", tau
 
-time_loop: do i = 1, dim3, 1
+	! Iterate over time
+	time_loop: do i = 1, dim3, 1
 
-		if ((i+stride) .gt. dim3) then
-			exit time_loop
-		end if
-
-		num_pts = num_pts + 1
-
-		disp_avg_co = 0.0
-		disp_max = 0.0
-
-		coord_loop: do j = 1, dim1, 1
-
-			x1 = arr_in(j,1,i)
-			x2 = arr_in(j,1,i+stride)
-			y1 = arr_in(j,2,i)
-			y2 = arr_in(j,2,i+stride)
-			z1 = arr_in(j,3,i)
-			z2 = arr_in(j,3,i+stride)
-
-			! Axial distances traveled
-			xd = (x2 - x1)
-			yd = (y2 - y1)
-			zd = (z2 - z1)
-
-			! Account for periodic boundaries
-			! X
-			if (abs(xd) .ge. xbx) then
-				if (xd .gt. 0) then
-						xd = xd - xbx
-				else
-						xd = xd + xbx
-				end if
+			if ((i+stride) .gt. dim3) then
+				exit time_loop
 			end if
-			! Y
-			if (abs(yd) .ge. ybx) then
-				if (yd .gt. 0) then
+
+			disp_avg_co = 0.0
+			disp_max = 0.0
+
+			! Iterate over each bead
+			coord_loop: do j = 1, dim1, 1
+
+				x1 = arr_in(j,1,i)
+				x2 = arr_in(j,1,i+stride)
+				y1 = arr_in(j,2,i)
+				y2 = arr_in(j,2,i+stride)
+				z1 = arr_in(j,3,i)
+				z2 = arr_in(j,3,i+stride)
+
+				! Axial distances traveled
+				xd = abs(x2 - x1)
+				yd = abs(y2 - y1)
+				zd = abs(z2 - z1)
+
+				! Account for periodic boundaries
+				! X
+				if (xd .ge. xbx) then
+					xd = xd - xbx
+				end if
+				! Y
+				if (yd .ge. ybx) then
 					yd = yd - ybx
-				else
-					yd = yd + ybx
 				end if
-			end if
-			! Z
-			if (abs(zd) .ge. zbx) then
-				if (zd .gt. 0) then
+				! Z
+				if (zd .ge. zbx) then
 					zd = zd - zbx
-				else
-					zd = zd + zbx
 				end if
-			end if
-			! Determine
-			disp = dist(xd,yd,zd)
+				! Determine
+				disp = dist(xd,yd,zd)
 
-			if (disp .gt. disp_max) then
-				max_mol = j
-				disp_max = disp
-			end if
+				if (disp .gt. disp_max) then
+					max_mol = j
+					disp_max = disp
+				end if
 
-			disp_avg_co = disp_avg_co + disp
+				disp_avg_co = disp_avg_co + disp
 
-		end do coord_loop
+			end do coord_loop
 
-		disp_avg_co = disp_avg_co/float(dim1)
-		disp_avg_ti = disp_avg_ti + disp_avg_co
+			disp_avg_co = disp_avg_co/float(dim1)
+			disp_avg_ti = disp_avg_ti + disp_avg_co
 
-end do time_loop
+		end do time_loop
 
-	disp_avg_ti = disp_avg_ti/float(dim3)
-	write(16,*) tau, disp_avg_ti**2
+	disp_avg_ti = disp_avg_ti/float(dim3-stride)
+
+	write(16,*) tau, disp_avg_ti**2, disp_max**2
 
 end do iter_stride
 
