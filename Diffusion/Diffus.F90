@@ -22,7 +22,7 @@ implicit none
 	real				  						:: tstep
 	integer										:: numMols
 	integer										:: numTsteps, t_cur
-	integer										:: num_files
+	integer										:: num_files, strd
 	integer										:: ioErr
 	integer										:: i, j
 	integer										:: mol_num
@@ -31,6 +31,9 @@ implicit none
 	real											:: x, y, z
 	real											:: junk
 	real,allocatable					:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
+
+write(*,*) "Please enter the desired stride"
+read(*,*) strd
 
 write(*,*) "Please enter the number of files."
 read(*,*) num_files
@@ -145,13 +148,13 @@ end if
 write(*,*) "Number of data elements not read: ", count(mast_arr .eq. -1000.0)
 write(*,*) "Data read. Beginning diffusion calculations."
 
-call diffuse(numMols,3,numTsteps,mast_arr,xlen,ylen,zlen)
+call diffuse(numMols,3,numTsteps,mast_arr,xlen,ylen,zlen,strd)
 
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine diffuse(dim1,dim2,dim3,arr_in,xbx,ybx,zbx)
+subroutine diffuse(dim1,dim2,dim3,arr_in,xbx,ybx,zbx,stride)
 ! Subroutine to find displacement of molecules. Finds average as well
 ! Periodic boundary handling
 
@@ -161,12 +164,15 @@ implicit none
 	integer,intent(in)		:: dim1, dim2, dim3 ! num. beads, xyz,num T steps
 	real,intent(in)				:: xbx, ybx, zbx ! Box dimensions
 	real,intent(in)				:: arr_in(dim1,dim2,dim3) ! master array
+	integer,intent(in)		:: stride
 
-	integer								:: stride, tau ! length of time, LJ time steps
-	integer								:: max_tau, max_stride ! Boundaries
-	integer								:: stride_iter ! Amt. to update stride
+	integer								:: tau ! LJ time steps
+	integer								:: max_tau ! Boundaries
 	integer								:: i, j, k ! Looping integers
+	real									:: disp_arr_co(dim1) ! holds disp. for each mol
+	real									:: avg_std, avg_t
 	real									:: disp_avg_co, disp_avg_ti ! avg for beads, time resp.
+	real									:: disp_tot ! Total displacement from t = 0
 	real									:: disp, disp_avg, disp_max
 	real									:: x1, x2, y1, y2, z1, z2
 	real									:: xd, yd, zd ! Axial distances
@@ -174,27 +180,32 @@ implicit none
 
 	character*12					:: filename
 
+! Sum positions instead of new q_0 each time,
+! Track total tau instead of delta tau
+! Do not change stride
+
 max_tau = 50*dim3
+
 write(*,*) "Largest Tau available:", max_tau
 ! Each timestep is 50 tau
-max_stride = dim3/50
-
-stride_iter = max_stride/10
 
 filename = "diff_out.dat"
-open(unit=16,file=filename,status="unknown",position="append")
+
+open(unit=16,file=filename,status="replace",position="append")
 
 disp_avg_co = 0.0
 disp_avg_ti = 0.0
 disp_avg = 0.0
+disp_tot = 0.0
 
 ! Iterate through time differences
-iter_stride: do k = 1, max_stride, stride_iter
+iter_stride: do k = 1, dim3, 1
 
-	stride = k
-	tau = 50*stride
+	tau = 50*k
 	disp_avg_ti = 0.0
 	write(*,*) "Calculating for", tau
+
+	avg_std = 0.0
 
 	! Iterate over time
 	time_loop: do i = 1, dim3, 1
@@ -242,6 +253,7 @@ iter_stride: do k = 1, max_stride, stride_iter
 					disp_max = disp
 				end if
 
+				disp_arr_co(j) = disp
 				disp_avg_co = disp_avg_co + disp
 
 			end do coord_loop
@@ -249,14 +261,48 @@ iter_stride: do k = 1, max_stride, stride_iter
 			disp_avg_co = disp_avg_co/float(dim1)
 			disp_avg_ti = disp_avg_ti + disp_avg_co
 
+			call std_dev(dim1,disp_arr_co,avg_t)
+			avg_std = avg_std + avg_t
+
 		end do time_loop
 
 	disp_avg_ti = disp_avg_ti/float(dim3-stride)
+	disp_tot = disp_tot + disp_avg_ti
+	avg_std = avg_std/float(i)
 
-	write(16,*) tau, disp_avg_ti**2, disp_max**2
+	write(16,*) tau, disp_tot**2, avg_std
 
 end do iter_stride
 
 close(16)
+
+end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine std_dev(dim,arr_in,stdev)
+! Subroutine accepts a 1D real array and returns the standard deviation of the
+! values
+
+implicit none
+	integer,intent(in) :: dim
+	real,intent(in)		 :: arr_in(dim)
+	real,intent(out)	 :: stdev
+
+	real							 :: mean
+	real							 :: r_sum
+	integer						 :: i
+
+r_sum = 0.0
+
+mean = sum(arr_in)/float(dim)
+
+do i = 1, dim, 1
+		r_sum = r_sum + (arr_in(i)-mean)**2
+end do
+
+stdev = r_sum/float(dim)
+
+stdev = sqrt(stdev)
 
 end subroutine
