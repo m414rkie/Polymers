@@ -10,7 +10,7 @@ real function dist(x,y,z)
 implicit none
 		real,intent(in) :: x, y, z
 
-	dist = ((x**2) + (y**2) + (z**2))**(0.5)
+	dist = sqrt((x**2) + (y**2) + (z**2))
 
 end function dist
 

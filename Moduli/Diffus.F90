@@ -33,7 +33,9 @@ implicit none
 	real											:: x, y, z
 	real											:: junk
 	real,allocatable					:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
-	real											:: time_prev
+
+write(*,*) "Please enter the number of LJ timesteps between each data snapshot:"
+read(*,*) lj_t
 
 write(*,*) "Please enter the number of files."
 read(*,*) num_files
@@ -44,6 +46,7 @@ if (ioErr .ne. 0) then
 	stop
 end if
 
+
 file_in: do i = 1, num_files, 1
 	write(*,*) "Please enter the name of file", i
 	read(*,*) raw_in
@@ -53,7 +56,6 @@ end do file_in
 ! This section to determine the total number of timesteps and number of molecules
 numTsteps = 0
 t_cur = 0
-time_prev = -1.0
 
 file_iter_time: do i = 1, num_files, 1
 			open(unit=15,file=file_arr(i),status="old",action="read")
@@ -63,7 +65,7 @@ file_iter_time: do i = 1, num_files, 1
 read_loop: do
 
 	read(15,*,END=101)
-	read(15,*) tstep
+	read(15,*)
 	read(15,*)
 	read(15,*) numMols_r
 	numMols = int(numMols_r)
@@ -73,10 +75,7 @@ read_loop: do
 	read(15,*) zmin, zmax
 	read(15,*)
 
-	if (tstep .ne. time_prev) then
-		numTsteps = numTsteps + 1
-		time_prev = tstep
-	end if
+	numTsteps = numTsteps + 1
 
 	! Read in molecule data
 	file_read: do j = 1, numMols, 1
@@ -109,8 +108,6 @@ mast_arr = -1000.0
 
 ! Read in the data to master array
 
-time_prev = -1.0
-
 
 file_iter_main: do i = 1, num_files, 1
 			open(unit=15,file=file_arr(i),status="old",action="read")
@@ -122,44 +119,23 @@ out_loop: do
 	read(15,*,END=103)
 
 	read(15,*) tstep
-	if (tstep .eq. time_prev) then
+	read(15,*)
+	read(15,*) numMols_r
+	numMols = int(numMols_r)
+	read(15,*); read(15,*);
+	read(15,*); read(15,*); read(15,*);
 
-		read(15,*)
-		read(15,*) numMols_r
-		read(15,*); read(15,*);
-		read(15,*); read(15,*); read(15,*);
+	t_cur = t_cur + 1
 
-		! Read in molecule data
-		data_in: do j = 1, numMols, 1
+	! Read in molecule data
+	data_in: do j = 1, numMols, 1
 
-			read(15,*)
+		read(15,*) mol_num, junk, x, y, z
+		mast_arr(mol_num,1,t_cur) = x
+		mast_arr(mol_num,2,t_cur) = y
+		mast_arr(mol_num,3,t_cur) = z
 
-		end do data_in
-
-	else
-		time_prev = tstep
-		read(15,*)
-		read(15,*) numMols_r
-		numMols = int(numMols_r)
-		read(15,*); read(15,*);
-		read(15,*); read(15,*); read(15,*);
-
-		!write(*,*) t_cur
-		t_cur = t_cur + 1
-
-		! Read in molecule data
-		dat_in: do j = 1, numMols, 1
-
-			read(15,*) mol_num, junk, x, y, z
-			mast_arr(mol_num,1,t_cur) = x
-			mast_arr(mol_num,2,t_cur) = y
-			mast_arr(mol_num,3,t_cur) = z
-
-		end do dat_in
-
-	end if
-
-	time_prev = tstep
+	end do data_in
 
 end do out_loop
 
@@ -197,7 +173,7 @@ implicit none
 	real,intent(in)				:: xmx, ymx, zmx
 	real,intent(inout)		:: arr_in(dim1,dim2,dim3) ! Master array
 
-	integer								:: i, j, k
+	integer								:: i, j
 	real									:: r1, r2, d
 	real									:: xbx, ybx, zbx
 
@@ -220,14 +196,10 @@ bead_loop: do j = 1, dim1, 1
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
-			do k = i+1, dim3, 1
-			  arr_in(j,1,k) = arr_in(j,1,k) - xbx
-			end do
+			arr_in(j,1,i+1:dim3) = arr_in(j,1,i+1:dim3) - xbx
 			! Displacement in negative direction
 		else if (d .lt. 0.0) then
-			do k = i+1, dim3, 1
-			  arr_in(j,1,k) = arr_in(j,1,k) + xbx
-			end do
+			arr_in(j,1,i+1:dim3) = arr_in(j,1,i+1:dim3) + xbx
 		end if
 	end if
 
@@ -241,14 +213,10 @@ bead_loop: do j = 1, dim1, 1
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
-			do k = i+1, dim3, 1
-			  arr_in(j,2,k) = arr_in(j,2,k) - ybx
-			end do
+			arr_in(j,2,i+1:dim3) = arr_in(j,2,i+1:dim3) - ybx
 			! Displacement in negative direction
 		else if (d .lt. 0.0) then
-			do k = i+1, dim3, 1
-			  arr_in(j,2,k) = arr_in(j,2,k) + ybx
-			end do
+			arr_in(j,2,i+1:dim3) = arr_in(j,2,i+1:dim3) + ybx
 		end if
 	end if
 
@@ -262,14 +230,10 @@ bead_loop: do j = 1, dim1, 1
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
-			do k = i+1, dim3, 1
-			  arr_in(j,3,k) = arr_in(j,3,k) - zbx
-			end do
+			arr_in(j,3,i+1:dim3) = arr_in(j,3,i+1:dim3) - zbx
 			! Displacement in negative direction
 		else if (d .lt. 0.0) then
-			do k = i+1, dim3, 1
-			  arr_in(j,3,k) = arr_in(j,3,k) + zbx
-			end do
+			arr_in(j,3,i+1:dim3) = arr_in(j,3,i+1:dim3) + zbx
 		end if
 	end if
 
@@ -284,6 +248,8 @@ end subroutine
 subroutine diffuse(dim1,dim2,dim3,arr_in,f_step)
 ! Subroutine to find displacement of molecules. Finds average as well
 ! Periodic boundary handling
+
+use functions
 
 implicit none
 	integer,intent(in)		:: dim1, dim2, dim3 ! num. beads, xyz,num T steps
@@ -304,6 +270,10 @@ implicit none
 	real									:: xd, yd, zd ! Axial distances
 
 	character*12					:: filename
+
+! Sum positions instead of new q_0 each time,
+! Track total tau instead of delta tau
+! Do not change stride
 
 max_tau = f_step*dim3
 max_stride = dim3/2
@@ -348,7 +318,7 @@ disp_tot = 0.0
 				zd = (z2 - z1)
 
 				! Determine
-				call dist(xd,yd,zd,disp)
+				disp = dist(xd,yd,zd)
 
 				disp_avg_co = disp_avg_co + disp**2
 
@@ -403,22 +373,5 @@ end do
 stdev = r_sum/float(dim)
 
 stdev = sqrt(stdev)
-
-end subroutine
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine dist(x,y,z,d)
-! Function checks the distance of two molecules
-! in 3D space using simple distance formula
-! xyz mol 1; abc mol2
-
-implicit none
-		real,intent(in)    :: x, y, z
-		real,intent(inout) :: d
-
-	d = 0.0
-
-	d = sqrt((x**2) + (y**2) + (z**2))
 
 end subroutine
