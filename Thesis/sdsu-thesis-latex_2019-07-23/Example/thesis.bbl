@@ -1,0 +1,100 @@
+\begin{thebibliography}{10}
+
+\bibitem{ART}
+{\sc T.~Abraham}, {\em Mathematical study of $\gamma$-rings in a {H}ilbert
+  space}, J. Math. Anal. Appl., 19 (1984), pp.~125--128.
+
+\bibitem{ABCD2019}
+{\sc A.~Anderssen, B.~Bertilsen, C.~Carlson, and D.~Davidson}, {\em
+  {Quad-Authored Article}}, {The Journal of Multi-Authored Articles},  (2019).
+
+\bibitem{PRO}
+{\sc P.~Axelrod and C.~P. Snow}, eds., {\em Proceedings of the Conference on
+  Mathematical Population Genetics}, New York, 1982, Marcel Dekker.
+
+\bibitem{INC}
+{\sc B.~J. Bach}, {\em Homotopy theory for the delay differential equation
+  $\dot y(t) = {A}y(t-\tau)$}, in Concepts in Differential Equations,
+  F.~Neuerfeldt, ed., vol.~2, Academic Press, Washington, D.C., 1987,
+  pp.~807--876.
+
+\bibitem{BOK}
+{\sc G.~T. Bankhead}, {\em Modeling and Control in the Mathematical Sciences},
+  vol.~69 of Lecture Notes in Mathematics, Springer, Berlin, 1975.
+
+\bibitem{INB}
+{\sc R.~DeWitt}, {\em Abstract Functional Equations for Fluids},
+  Addison-Wesley, New York, 1983, ch.~9, pp.~274--293.
+
+\bibitem{MTH}
+{\sc H.~B. Finknoddle}, {\em Random processes for $\alpha$-surds in a complex
+  topology}, Master's thesis, San Diego State University, San Diego, CA, 1990.
+
+\bibitem{PatentExample}
+{\sc B.~Gates}, {\em {The Knife and Fork: Novel Eating Utensils for the Mass
+  Consumption of Plant and Animal Based Food Items}},
+  U.S.~Patent~No.~0,000,000. January 19, 2038.
+
+\bibitem{UMLAUT}
+{\sc H.~H\"{a}ggb{\o}rg}, {\em {The Art of Umlauts --- The Nonsense of {\"a}
+  {\^e} {\`i} {\.I} {\o} {\'u} {\aa} {\c c} {\u g} {\l} {\~n} {\H o} {\v r}
+  {\ss}}}.
+\newblock {How To Add Umlauts in Citations}.
+
+\bibitem{LAM}
+{\sc L.~Lamport}, {\em \LaTeX: A Document Preparation System}, Addison-Wesley,
+  Reading, Massachusetts, 1986.
+
+\bibitem{LAM2}
+{\sc L.~Lamport}, {\em \LaTeX: A Document Preparation System (doubled
+  reference)}, Addison-Wesley, Reading, Massachusetts, 1986.
+
+\bibitem{Lehto:1976}
+{\sc O.~Lehto}, {\em On the boundary value problem for quasiconformal
+  mappings}, in Romanian-Finnish Seminar on Complex Analysis (Proc., Bucharest,
+  1976), vol.~743 of Lecture Notes in Math., Springer, Berlin, 1979,
+  pp.~184--196.
+
+\bibitem{MJV}
+{\sc J.~M. Mahaffy, D.~A. Jorgensen, and R.~L. Vanderheyden}, {\em Oscillations
+  in a model of repression with external control}, Quart.\ Appl.\ Math., 50
+  (1992), pp.~415--435.
+
+\bibitem{Milnor:topdiff}
+{\sc J.~W. Milnor}, {\em {Topology From The Differentiable Viewpoint}}, The
+  University Press of Virginia, Charlottesville, Virginia, 1969.
+
+\bibitem{DTM2010spring}
+{\sc Montezuma Publishing}, {\em San Diego State Univeristy Dissertation and
+  Thesis Manual: Policies, Procedures and Format}, Spring 2010.
+
+\bibitem{Wikipedia}
+{\sc M.~Peeps}, {\em The truth about everything}.
+\newblock Wikipedia, http://www.wikipedia.com/, accessed August 2012, n.d.
+
+\bibitem{TEC}
+{\sc I.~T. Simon and A.~M. McGeorge}, {\em Integration of large {B}essel
+  functions}, Technical Report 284, San Diego State University, San Diego, CA,
+  1989.
+
+\bibitem{UNP}
+{\sc J.~K. Slemrod}, {\em ${P}$-infinity norms in the physical sciences}.
+\newblock Unpublished report, 1990.
+
+\bibitem{INP}
+{\sc B.~W. Stuart}, {\em Contour mappings over closed ${\Omega}$-groups}, in
+  Complex Algebras, G.~V. Avery, ed., vol.~\$VOLUME\_REQUIRED\$, Philadelphia,
+  PA, 1987, SIAM, p.~\$PAGES\_REQUIRED\$.
+
+\bibitem{EPA-2010-09-07}
+\textsc{United States Environments Protection Agency}.
+\newblock \emph{EPA Challenges Colleges to Recycle at Football Games / Agency
+  encourages fans to Reduce, Reuse, Recycle.}\/ News Release, Sept.\ 7, 2010.
+  http://yosemite.epa.gov/opa/admpress.nsf/2010\%20Press\%20Releases?OpenView,
+  accessed September 2010.
+
+\bibitem{BKL}
+{\em Writing style for the mathematical sciences}.
+\newblock AMS, Providence, RI, 1979.
+
+\end{thebibliography}

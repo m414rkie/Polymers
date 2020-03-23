@@ -34,6 +34,13 @@ implicit none
 	real											:: junk
 	real,allocatable					:: mast_arr(:,:,:) ! (molNum,x-y-z,time)
 	real											:: time_prev
+	integer										:: t_stride
+
+write(*,*) "Please enter the number of LJ timesteps per data snapshot."
+read(*,*) lj_t
+
+write(*,*) "Please enter the stride for the timesteps"
+read(*,*) t_stride
 
 write(*,*) "Please enter the number of files."
 read(*,*) num_files
@@ -182,7 +189,7 @@ call flat(numMols,3,numTsteps,mast_arr,xmin,ymin,zmin,xmax,ymax,zmax)
 
 write(*,*) "Data Flattened. Beginning diffusion calculations."
 
-call diffuse(numMols,3,numTsteps,mast_arr,lj_t)
+call diffuse(numMols,3,numTsteps,mast_arr,t_stride,lj_t)
 
 end program
 
@@ -281,13 +288,13 @@ end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine diffuse(dim1,dim2,dim3,arr_in,f_step)
+subroutine diffuse(dim1,dim2,dim3,arr_in,f_step,lj_c)
 ! Subroutine to find displacement of molecules. Finds average as well
 ! Periodic boundary handling
 
 implicit none
 	integer,intent(in)		:: dim1, dim2, dim3 ! num. beads, xyz,num T steps
-	integer,intent(in)		:: f_step
+	integer,intent(in)		:: f_step,lj_c
 	real,intent(in)				:: arr_in(dim1,dim2,dim3) ! master array
 
 	integer								:: max_tau, max_stride, dtau ! Boundaries
@@ -305,7 +312,7 @@ implicit none
 
 	character*12					:: filename
 
-max_tau = f_step*dim3
+max_tau = lj_c*dim3
 max_stride = dim3/2
 
 write(*,*) "Largest Tau available:", max_tau
@@ -319,7 +326,7 @@ open(unit=16,file=filename,status="replace",position="append")
 tau_loop: do k = 1, max_stride, 1
 
 stride = k
-dtau = f_step*stride
+dtau = lj_c*k
 
 num_t_chk = 0
 disp_avg_ti = 0.0
@@ -327,7 +334,7 @@ disp_avg = 0.0
 disp_tot = 0.0
 
 	! Iterate over time
-	time_loop: do i = 1, dim3-max_stride, 1
+	time_loop: do i = 1, dim3-max_stride, f_step
 
 			num_t_chk = num_t_chk + 1
 			disp_avg_co = 0.0

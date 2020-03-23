@@ -1,0 +1,46 @@
+======================================================================
+WARNING:
+   This file has not been updated since it was transcribed from some
+   iStone tablets sometime in the dark ages.
+======================================================================
+
+
+======================================================================
+SDSU Mathematics LaTeX Thesis Template           Mac OS X Instructions
+======================================================================
+
+Since OS X is unix based, everything in the README_Linux file
+also pertains to OS X.   The command line and Makefile work just as
+with unix.  Since Mac_OSX uses pdf files natively, you should mae one
+change in the Makefile
+from
+all: thesis.ps
+to
+all: thesis.pdf
+Here we will just mention a few things specific to OS X.  
+
+
+Getting and Installing LaTex:
+
+Here, I think, is the simplest route:
+Follow the directions on  
+www.uoregon.edu/~koch/texshop/texshop.html 
+You will use i-installer by Gerben Wierda to install TeTex 
+(Tex, Latex and a lot more) and then install TexShop.
+TexShop is a nice front end which includes an editor, a compiler
+window and a pdf file window.  You may also use a different editor
+and still use TexShop to view and compile.
+
+
+Here is a tutorial on Latex and TexShop
+http://www.rna.nl/tex.html
+
+The other main distribution of Tex is with fink
+fink.sourceforge.net
+
+There are several other front-ends available as well.
+Several are mentioned at
+http://www.rna.nl/tex.html
+
+Mike O'Sullivan  
+<mosulliv@math.sdsu.edu>

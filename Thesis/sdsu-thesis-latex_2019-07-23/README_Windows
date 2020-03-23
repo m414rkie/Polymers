@@ -1,0 +1,85 @@
+======================================================================
+WARNING:
+   This file has not been updated since it was transcribed from some
+   stone tablets sometime in the dark ages.
+======================================================================
+
+
+======================================================================
+SDSU Mathematics LaTeX Thesis Template            Windows Instructions
+======================================================================
+
+The file 'thesis.tex' must be compiled (processed) to produce a Post
+Script (PS) or a Portable Document Format (PDF) file that will be
+nicely typeset.  This can be done from the command line or by using a
+graphical editor.  The 'Makefile' mentioned in the README file does
+not work on a win32 platform.  In either case, you need to have the
+file 'sdsu-thesis.cls' in the same directory as 'thesis.tex' or
+installed where the other LaTeX classes are located.
+
+
+Command Line:
+
+You will need to open a command prompt first.  This can be done by
+clicking on the 'Start' menu on the desktop and selecting 'Run...'.
+In the dialog box that opens type either 'command' or 'cmd' depending
+on whether you are using Windows 9x/ME or Windows 2000/XP,
+respectively.  Now navigate to the directory where the file
+'thesis.tex' is located.
+
+To produce a PS document you will need to run the commands as follows
+(you must run latex serveral times to resolve all of the refernces and
+the tables of contents correctly).
+
+	latex  thesis
+	bibtex thesis
+	latex  thesis
+	latex  thesis
+
+This series of commands will create a file called 'thesis.dvi'.  In
+order to convert this file to a PS file use the 'dvips' command as
+follows:
+
+	dvips -o thesis.ps thesis
+
+The PS file can then be converted to PDF with the next command:
+
+	epstopdf --outfile thesis.pdf  thesis.ps
+
+
+
+Getting LaTeX:
+
+You can borrow the TeXLive installation CD from the department office.
+Alternatively, you can download the compressed image file (.iso) from
+the TUG tex-archive and burn your own CD.
+
+TeXLive is distributed on CD, for which the ISO image is available from 
+the Comprehensive TeX Archive Network (CTAN). You need to download the 
+compressed image file, expand it, and then copy the resulting image 
+file to a recordable CD. Here's how to download the TeXLive 2003 
+(September 28, 2003) image, for example, and write it to CD:
+
+1. Login to a Windows machines with a CD-RW drive and open a web 
+browser.
+2. Go to http://tug.org/texlive/historic/2003/ on the TeX Users Group.
+3. Download compressed the ISO image file 
+texlive2003-inst-20030928.iso to a local drive on your computer. 	
+4.  Use Easy CD Creator to write texlive2003-inst-20030928.iso onto a CD.
+5. Delete files texlive2003-inst-20030928.iso.bz2 
+texlive2003-inst-20030928.iso from your u: directory when done.
+6. Follow the installation instructions on the CD.
+
+Note: There is a more current version of TeXLive (TeXLive 2004), but 
+this distribution does not have a convenient installation for Windows.
+
+
+Graphical Editors:
+
+There are several graphical front-end editors for LaTeX on Windows.  
+Two editors that I have have had good results with are TeXnicCenter and 
+WinShell.  Both of these editors are available for free and can be 
+downloaded from CTAN (http://www.tug.org/tex-archive/systems/windows).
+
+An excellent FAQ about TeXnicCenter (TxC) can be found at 
+http://www.math.vanderbilt.edu/~schectex/wincd/tips_txc.htm

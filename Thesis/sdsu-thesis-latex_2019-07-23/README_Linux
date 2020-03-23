@@ -1,0 +1,124 @@
+======================================================================
+SDSU Mathematics LaTeX Thesis Template              Linux Instructions
+======================================================================
+
+   The file thesis.tex has to be compiled (processed) to produce a
+   postscript or pdf file that will be nicely typeset.  You may do
+   this from the command line, or using the "Makefile" included with
+   this distribution.  In either case, you need to have the file
+   sdsu-thesis.cls in the current directory where you are working
+   (easiest, and therefore recommended), or installed where the other
+   LaTeX classes are.
+
+
+======================================================================
+Command line
+======================================================================
+
+   To make a postscript document you will need to run the commands as
+   follows (you must run latex several times to get all references and
+   tables of contents right).
+
+      latex  thesis
+      bibtex thesis
+      latex  thesis
+      latex  thesis
+
+   Now you will have a thesis.dvi and must convert that to a
+   postscript/pdf file.  This is done with the dvips command as
+   follows:
+
+      dvips  -o thesis.ps  thesis
+      dvipdf -o thesis.pdf thesis
+
+   (If you have your computer set up for different paper sizes, you
+    might have to add `-t letter' option to the dvips command line.
+    This for example happens if your computer is set up for some other
+    language then American English.)
+
+   To get a PDF file you can then convert your thesis.ps file as
+   follows
+
+      ps2pdf thesis.ps thesis.pdf
+
+
+======================================================================
+Using the Makefile
+======================================================================
+
+   On Linux, the supplied "Makefile" should do all the above for you,
+   so if you just run "make" in this directory you will get a
+   thesis.ps produced.  You can also run ``make view'' which will
+   automatically run gv (ghostview) for you.  So you could open a text
+   editor and whenever you make a change and want to see how it looks,
+   you could just run "make view".  The conversion to pdf is also
+   quite simple, you can just run "make thesis.pdf" and that will
+   produce a postscript file and then convert it to PDF format for
+   you.
+
+
+======================================================================
+Printing
+======================================================================
+
+   You can type "lpr thesis.ps" to print your thesis.  You can also
+   print from a Postscript/PDF viewer.
+
+
+======================================================================
+Installing the class file                            [not recommended]
+======================================================================
+
+   To install the class file (the sdsu-thesis.cls file) on a Linux
+   system, you can either place it in a directory ~/texmf/tex/latex/
+   (where ~ refers to your home directory) or wherever LaTeX is
+   installed on the system (on my system for example it is at
+   /usr/share/texmf/tex/latex/).  If you install the class file you
+   will no longer need to have it in the current directory where you
+   run the command "latex".
+
+   It is not neecessary to install the class file unless you are using
+   some tools other then just a text editor to write the document and
+   those tools require the class file to be installed.  After you
+   install the class file in the correct location you must run the
+   "texhash" program, otherwise LaTeX will not see it.
+
+   Note that you can always arrow up to the last command and press
+   enter to re-run it on most linux shells, so that you don't have to
+   retype things all the time at the command line.
+
+
+======================================================================
+Not Installing the class file                            [recommended]
+======================================================================
+
+   Simply keeping everything thesis-related in a single directory
+   structure (see the Example) is the least error-prone approach.
+   Simply copy Example directory
+
+      cp -aRv Example MyThesis
+
+   and edit the *.tex files in the MyThesis directory.
+
+
+======================================================================
+LaTeX Editors
+======================================================================
+
+   There exist many text editors for LaTeX.  Emacs
+   (https://www.gnu.org/software/emacs/) is The One True Text
+   Editor[tm]. If you are a heathen, you can use some other text
+   editor. :-)
+
+   Another such editor that should work with Linux, Windows and MacOS
+   is Texmaker (https://www.xm1math.net/texmaker/)
+
+   There is also a host of emacs packages that help with latex
+   writing, some of them even giving graphical preview of what you are
+   typing, but emacs is not the easiest text editor out there.
+
+   Other options include:
+      TeXmacs (https://www.texmacs.org/)
+      LyX     (https://www.lyx.org/)
+
+   Under no circumstances should you use vi/vim.

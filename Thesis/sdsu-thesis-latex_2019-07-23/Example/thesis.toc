@@ -1,0 +1,47 @@
+\contentsline {schapter}{ABSTRACT}{vi}
+\contentsline {schapter}{LIST OF TABLES}{ix}
+\contentsline {schapter}{LIST OF FIGURES}{x}
+\contentsline {schapter}{GLOSSARY}{xi}
+\contentsline {schapter}{ACKNOWLEDGMENTS}{xii}
+\pagebreak [3]
+\contentsline {chaphd}{CHAPTER}{1}
+\nopagebreak 
+\contentsline {chapter}{\numberline {1}INTRODUCTION}{1}
+\contentsline {section}{\numberline {1.1}History}{1}
+\contentsline {section}{\numberline {1.2}Purpose}{1}
+\contentsline {section}{\numberline {1.3}Format of the Thesis}{2}
+\contentsline {section}{\numberline {1.4}Processing \LaTeX {} Files}{3}
+\contentsline {section}{\numberline {1.5}HELP! --- My Bibliography (or other Sub-part) in Not Working!}{5}
+\contentsline {section}{\numberline {1.6}Building the Document using a Graphical User Interface}{6}
+\contentsline {section}{\numberline {1.7}\LaTeX {} Thesis Review, or ``How to Bypass the Montezuma Publishing Review Process''}{6}
+\contentsline {chapter}{\numberline {2}MISCELLANEOUS COMMANDS: AN INTRODUCTION TO EQUATIONS, THEOREMS, FIGURES AND TABLES}{7}
+\contentsline {section}{\numberline {2.1}Basic Math}{7}
+\contentsline {section}{\numberline {2.2}Equations}{8}
+\contentsline {section}{\numberline {2.3}Theorems, etc.}{8}
+\contentsline {section}{\numberline {2.4}Numbering of Theorems, etc...}{9}
+\contentsline {section}{\numberline {2.5}Figures or How to Get into Real Trouble if You Take Advantage of What \LaTeX {} Can Do}{9}
+\contentsline {section}{\numberline {2.6}Tables}{10}
+\contentsline {section}{\numberline {2.7}Potential Pitfalls}{15}
+\contentsline {subsection}{\numberline {2.7.1}Tables and Figures}{15}
+\contentsline {subsubsection}{\numberline {2.7.1.1}Centered Tables Figures}{18}
+\contentsline {subsection}{\numberline {2.7.2}Margins}{18}
+\contentsline {subsection}{\numberline {2.7.3}Bad Pagebreaks}{18}
+\contentsline {subsection}{\numberline {2.7.4}Bad Linebreaks}{19}
+\contentsline {subsection}{\numberline {2.7.5}Vertical Space}{19}
+\contentsline {subsection}{\numberline {2.7.6}Non-Bold Math in the TOC: $x=2\pi /e$}{19}
+\contentsline {chapter}{\numberline {3}SECTIONING --- THE MIDDLE}{20}
+\contentsline {section}{\numberline {3.1}A Section}{20}
+\contentsline {subsection}{\numberline {3.1.1}A Subsection With a Very Long Title To See How That Will Look When Printed}{20}
+\contentsline {subsubsection}{\numberline {3.1.1.1}A Subsubsection}{20}
+\contentsline {subsubsubsection}{\numberline {3.1.1.1.1}A Subsubsubsection}{20}
+\contentsline {paragraph}{\numberline {3.1.1.1.1.1}A Paragraph.}{20}
+\contentsline {subsection}{\numberline {3.1.2}A Friend of \S 3.1.1\hbox {}}{20}
+\contentsline {section}{\numberline {3.2}A 2nd Section}{20}
+\contentsline {chapter}{\numberline {4}REFERENCING}{22}
+\contentsline {schapter}{BIBLIOGRAPHY}{24}
+\pagebreak [3]
+\contentsline {chaphd}{APPENDICES}{26}
+\nopagebreak 
+\contentsline {chapter}{\numberline {A}MORE INFORMATION ON EQUATIONS}{26}
+\contentsline {chapter}{\numberline {B}LISTS AND QUOTATIONS}{29}
+\vspace {5.98pt}\vspace {-3pt}\hspace {-0.25in}\parbox {0.25in}{Z}SOURCE CODE .\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {1pt}.\hspace {3pt}\space \hbox {on CD} 

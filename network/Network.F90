@@ -1,7 +1,7 @@
 ! Program takes an output file from the LAMMPS software package and
 ! reads in the linked beads. The program then builds a picture of
 ! the linked chains and determines, on average, how many chains are
-! attached to an end group.
+! attached to an end group, given that the endgroup is connected.
 
 ! Author: Jon Parsons
 ! Date: 5-21-19

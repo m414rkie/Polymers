@@ -1,0 +1,40 @@
+\glossarysection[\glossarytoctitle]{\glossarytitle}\glossarypreamble
+\begin{theglossary}\glossaryheader
+\glsgroupheading{glssymbols}\relax \glsresetentrylist %
+\glossentry{excl}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{quote}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{at}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{hash}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{rationals}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{reals}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{integers}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{bar}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{A}\relax \glsresetentrylist %
+\glossentry{array}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{B}\relax \glsresetentrylist %
+\glossentry{binary}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{C}\relax \glsresetentrylist %
+\glossentry{comment}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{G}\relax \glsresetentrylist %
+\glossentry{global}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{L}\relax \glsresetentrylist %
+\glossentry{local}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\glossentry{lvm}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}\glsgroupskip
+\glsgroupheading{S}\relax \glsresetentrylist %
+\glossentry{svd}{\glossaryentrynumbers{\relax 
+		\setentrycounter[]{page}\glsnumberformat{x}}}%
+\end{theglossary}\glossarypostamble

@@ -96,7 +96,7 @@ radius = 0.5
 
 do i = 2, dim1-1, 1
 	time = ins(i,1) ! Time interval
-	freq = 1.0/time ! Frequency
+	freq = 2.0*pi/time ! Frequency
 
 	! Factor alpha
 	alpha = f(ins(i+1,2),ins(i-1,2),ins(i+1,1),ins(i,1))
@@ -128,7 +128,7 @@ subroutine outputs(outs,dim1,dim2)
 		integer								:: i
 
 open(unit=15,file="modulis.dat",status="replace",position="append")
-
+write(15,*)"w    G'    G''"
 do i = 1, dim1-1, 1
 	write(15,*) outs(i,1), outs(i,2), outs(i,3)
 end do

@@ -1,0 +1,357 @@
+======================================================================
+SDSU Mathematics LaTeX Thesis Template
+======================================================================
+
+This directory contains the SDSU LaTeX thesis template and supporting
+materials.  It is done specifically for the Mathematics department, so
+it does not allow all the different SDSU thesis styles, but just
+focuses on the needs of the Mathematics department. It should also
+work for the Computer Science department and perhaps others that use
+the Technical format of the SDSU thesis manual.  Suggestions and
+addenda pertinent to other departments are very welcome!
+
+Files:
+
+ (*)-marked files are not necessarily maintained...
+
+ README_First       - This file, getting started
+ README_Linux       - instructions for use on Linux
+ README_MacOSX      - instruction for Mac_OSX(*)
+ README_Windows     - instructions for Windows(*)
+
+ Example/
+    Makefile        - UNIX/Linux makefile to make things simple
+    abstract.tex    - Long example thesis abstract
+    append.tex      - Long example thesis appendix
+    body.tex        - Long example thesis body
+    glossary.tex    - Example Glossary
+    sdsu-thesis.cls - The SDSU-math Thesis LaTeX class file
+    siam.bst        - the "original" (1988 version) SIAM bibliographic
+                      style file[*], downloaded from
+                      http://www.siam.org/journals/auth-info.php 
+    siammod.bst     - slightly modified siam.bst [**]
+    siamplain.base  - a more recent (2018 version) of the SIAM
+                      bib-style.
+    thbib.bib       - Long example thesis bibliography
+    thesis.tex      - Long example thesis main file
+    Figures/        
+       cos.eps      - Figures for the example
+       mapping.eps  -  "
+       plot2.eps    -  "
+       somb.eps     -  "
+ 
+    [**] If you have two (or more) consecutive bibliography entries
+    	 with the SAME author, the "siam" style will replace the
+    	 author name in all but the first entries with a LONG DASH.
+    	 We do not want that, so use "\bibliographystyle{siammod}"
+    	 instead.  If you need "modern" fields {url, urldate, doi,
+    	 doiclass, eprint, eprintclass, archive, archiveprefix} you
+    	 can stitch something together using siammod.bst and
+    	 siamplain.bst (good luck!)
+
+ Resources/
+    Dissertation_and_Thesis_Manual-2010-May-14.pdf 
+                    - Downloaded from Montezuma Publishing
+    Including-eps-graphics-in-pdfLaTeX.pdf
+                    - Downloaded 2010-12-16 from
+                      http://www.2pi.info/latex/Includingeps.html
+    LaTeX_Thesis_Format_Approval_[OFFICIAL].docx
+    LaTeX_Thesis_Format_Details_[UNOFFICIAL].docx
+    LaTeX_Thesis_Format_Details_[UNOFFICIAL].pdf
+                    - Thesis Review Material/Information for
+                      departments / programs that have a LaTeX
+                      reviewer.
+    New_Review_Checklist_Downloaded-2019-July-23.pdf
+                    - Downloaded from Montezuma Publishing
+    Review-Checklist_Downloaded-2010-Sep-09.pdf             [OUTDATED]
+                    - Downloaded from Montezuma Publishing
+    SDSU_Formatting_Guidelines-Downloaded-2019-July-23.pdf
+                    - Downloaded from Montezuma Publishing
+    The-Subfigure-Package.pdf
+                    - Instructions for the "subfigure" package;
+    		      downloaded from  CTAN. 
+
+All the files here are really text files and you normally edit them
+with a standard text editor such as the GNOME or KDE text editor
+(gedit or kedit) if on a modern Linux system, emacs or vi on
+UNIX/Linux or Notepad on Windows.  You really only need to edit *.tex
+and thbib.bib files.  There are also some graphical editors for LaTeX.
+See a few paragraphs below.
+
+
+======================================================================
+Overview
+======================================================================
+
+You will need LaTeX (LaTeX2e in particular, not LaTeX 2.09) installed
+and working of course.  I would recommend using a Linux system such as
+Fedora, Ubuntu, openSUSE, Debian, Mandriva, ... since just about any
+Linux distribution comes with LaTeX and postscript viewer (gv or ggv)
+installed as standard.  You should also be able to use rohan or
+sciences as those computers also have everything you need installed.
+See the README files each operating system for more information.
+
+You should read and edit the thesis.tex (and the files included from
+that file) document which is a template for a thesis.  It has many
+comments (lines starting with '%') which explain how things are set
+up.
+
+It is probably safest to make a directory, say MyThesis, in which to
+put your own work.  That way if you download the sdsu thesis template
+a second time, you won't overwrite your thesis.  You may also want to
+put the various chapters in a file/files called
+body.tex/chapter001.tex-chapter999.tex so that you won't have to look
+at all the clutter in thesis.tex while you write.  Look at the Example
+subdirectory for an example of this.
+
+
+======================================================================
+Library Abstract          [This does not apply as of January 24, 2013]
+======================================================================
+
+The manual also requires a library abstract to be printed out.  The
+library abstract will be printed out as the last page of your thesis
+as long as you used the `libraryabstract' environment.  See the
+example for more information.
+
+
+======================================================================
+Bibliography
+======================================================================
+
+There are two main approaches to making a bibliography.  We have
+elected to use BibTeX in the examples.  With BibTeX you make a
+separate file (we called it thbib.bib) which contains a bibliographic
+database which is included into the thesis with the line
+
+   \bibliography{thbib}
+
+The style of bibliography  is defined by 
+
+   \bibliographystyle{siammod}
+
+You may change the bibliographic style at any time: just rerun bibtex
+and latex twice after doing so for the change to take effect.  BibTeX
+produces a file thesis.bbl which contains the TeX code for the
+bibliography, as well as a log file thesis.blg.  If you encounter a
+problem with the bibliography that BibTeX produces, you can always
+edit thesis.bbl, run latex once more and print.
+
+Entries in the bibliographic databases look like the following.
+
+@article{Abraham,
+  author="Abraham, T.",
+  title="Mathematical study of $\gamma$-rings in a {H}ilbert space",
+  journal="J. Math. Anal. Appl.",
+  volume="19",
+  pages="125-128",
+  year="1984"
+}
+
+In the first line, Abraham is "tag" that you create for citing.  When
+you write \ref{Abraham} in the thesis body, LaTeX will automatically
+insert the correct citation, in the correct format (defined by the
+bibliography style).  The BibTeX database entries may be obtained at
+MathSciNet, http://www.ams.org/mathscinet/search Search for your
+author title or whatever.  In the box at the upper left (which usually
+says Reviews (HTML)) choose Citations (BibTeX).
+
+
+======================================================================
+Further Information
+======================================================================
+
+You will probably need some good LaTeX reference.  LaTeX normally
+installs a lot of help files which are helpful and there are plenty of
+resources available on the web.  For more information on the SDSU
+class read the thesis.tex file.  And for even more information look in
+the long-example subdirectory.
+
+The book `LaTeX, A Document Preparation System' by Leslie Lamport is a
+good reference for LaTeX2e.  The book `The LaTeX Companion' is also
+has lots of information, but it really requires that you also have
+Leslie's book or if you already know quite a bit of latex.  It can
+help out if you need to do something not quite common.
+
+You can find more information than you could ever want at
+https://en.wikibooks.org/wiki/LaTeX including a 748-page free pdf-book
+(https://upload.wikimedia.org/wikipedia/commons/2/2d/LaTeX.pdf) 
+
+
+======================================================================
+RECENT History --- (Maintainer, please maintain this!!!)
+(Note filenames and folders are in square brackets) 
+
+* Tue Jul 23 21:01:07 PDT 2019 -- Peter Blomgren <blomgren@sdsu.edu>
+  - Maintenance release
+  - Many small changes; too many to remember since I am suffering from
+    the stages of CRS (Can't Remember S***).
+  - NOTE, the Montezuma Policies and Procedures were updated
+    (streamlined) on April 1, 2015.  Some of the more draconian rules
+    were abolished.
+    (http://www.montezumapublishing.com/thesis1/Formatting.aspx) 
+
+* Mon Jul  8 10:41:30 PDT 2013 -- Peter Blomgren
+  - ADDED support for Glossaries [sdsu-thesis.cls, thesis.tex,
+    glossaries.tex, Makefile]: if you don't need this comment out /
+    delete the appropriate lines in [thesis.tex], and the
+    "makeglossaries" line in [Makefile]
+  - ADDED PS2PDF_OPTS in the Makefile to force all fonts to be
+    embedded in the generated PDF file.  This is now a REQUIREMENT for
+    publishing.  If you are using a different publishing system than
+    ps2pdf (gs), then you may have to find the correct setting to
+    embed the fonts; ask your favorite uncle -- "Uncle Google."
+
+* Thu Jan 31 09:03:11 PST 2013 -- Peter Blomgren
+  - ADDED [LaTeX_Thesis_Format_Approval_[OFFICIAL].docx] in the
+    Resources folder.
+  - ADDED [LaTeX_Thesis_Format_Details_[UNOFFICIAL].docx] in the
+    Resources folder.
+  - ADDED [LaTeX_Thesis_Format_Details_[UNOFFICIAL].pdf] in the
+    Resources folder.
+  - [body.tex] Changed "caption hints" to include instructions for
+    FULL CITATIONs.
+  - [thesis.tex] "Since the library went electronic, they no longer
+    require an extra abstract to be inserted at the end of the
+    thesis."
+  - [thesis.tex] Added note about left-justification for short
+    captions.
+
+* Fri Feb 23 14:11:32 PST 2012 -- Peter Blomgren
+  - Added [The-Subfigure-Package.pdf] in the Resources folder.
+  - (EXPERIMENTAL) added \usepackage{amsthm} to [thesis.tex], and
+    added a definition of \newtheoremstyle{dtm} to trim space above
+    and below the theorem-like environments; commenting out
+    \theoremstyle{dtm} should bring back the old behavior (which is no
+    longer passing thesis review, even though "the review process
+    hasn't changed."  Yeah, right --- just look at the changelog since
+    September 30, 2010.
+  - Updated the way the "degree" is handled on the ABSTRACT pages; the
+    previous update broke these.  The new version now puts all the
+    information from the degreeONE,TWO,THREE fields on the abstract
+    pages; it is unclear whether this is correct in the
+    "Concentration" case. The DTM is not clear. [sdsu-thesis.cls]
+
+* Mon Feb 13 17:31:23 PST 2012 -- Peter Blomgren
+  - Changed the way [sdsu-thesis.cls] deals with optional arguments to
+    sectioning commands.  In the (common) one-argument case, the
+    argument goes into the TOC (if not too deep in the sectioning
+    structure) and the document; in the (rare) two-argument case, the
+    first argument goes into the TOC, and the SECOND into the
+    document.  Previous versions of [sdsu-thesis.cls] ignored the
+    second argument.  Main use: setting math formulas (in sectioning)
+    in BOLD TYPE inside the document, and in NON-BOLD TYPE in the TOC.
+  - Changed the way the "degree" is handled in the style file to make
+    it more obvious how to handle various degrees; in particular
+    degrees with "Concentrations" in some particular
+    area. [sdsu-thesis.cls, thesis.tex]
+  - Changed the way technical reports are handled in the
+    bibliography. [siammod.bst]
+  - [thesis.tex] is now usepackage'ing (how's that for a verb?!) the
+    caption package, with the correct parameters, at an early stage in
+    the process.  Caption labels should now be bold followed by a
+    period, with bold caption text in all (hopefully) cases.
+
+* Sat Feb 4 16:30:32 PST 2012 -- Peter Blomgren
+  - Added note on the subfig package (for those who refuse to use the
+    subfigure package), section "Potential Pitfalls" [body.tex]
+  - Added [siammod.bst] to the distribution; see comment marked [**]
+    in [README_First]
+  - Corrected spelling of "Acknowledgments."
+  - Added example of how to reference a patent.
+
+* Thu Dec 16 13:48:44 PDT 2010 -- Peter Blomgren
+  - Updated style [sdsu-thesis.cls] to conform to:
+    + [sub[sub[sub]]]sections should not be numbered in the appendices
+    + The appendix "splash pages" need to be horizontally and
+      VERTICALLY centered; previous versions left a *little* more
+      space at the  bottom of the page, which is visually more
+      pleasing, but not strictly conforming to the specifications.
+    + Added [Including-eps-graphics-in-pdfLaTeX.pdf] which contains
+      information on how to deal with eps graphics in situations (like
+      TeXShop on the Mac) where the LaTeX "compiler" is based on
+      pdfLaTeX (which cannot directly handle eps graphics).
+
+* Thu Sep 30 11:37:51 PDT 2010 -- Peter Blomgren
+  - Corrected template: Table caption ("Table Titles") -- Should be in
+    HEADLINE STYLE, i.e. All Majors Words Capitalized, and there is NO
+    period at the end of the caption.  [Previously the template
+    incorrectly showed ALL CAPS for table captions.]
+  - Various minor non-style related clean-up in [Example].
+  - THE OUTPUT FROM THIS VERSION WAS REVIEWED AND DEEMED "OK" BY THE
+    MONTEZUMA THESIS REVIEWER.
+
+* Thu Sep 23 13:50:54 PDT 2010 -- Peter Blomgren
+  - Moved [Dissertation_and_Thesis_Manual-2010-May-14.pdf] and
+    [Review-Checklist_Downloaded-2010-Sep-09.pdf] to a new subfolder
+    [Resources]
+  - Added [siam.bst] the SIAM bibliographic style file in [Example].
+
+* Thu Sep 17 11:28:42 PDT 2010 -- Peter Blomgren
+  - Consolidated the "short" and "long" examples into "Example."
+  - Added formatting information for adding supplementary
+    (non-paginated) material to the table of contents. [thesis.tex]
+  - Introduced new typos (for sure).
+  - DELETED the file [README_Problems], that information is incorporated
+    in the example [body.tex].
+  - The files [README_Mac_OSX], [README_Unix_Linux], and
+    [README_Windows] all need updating / consolidating...
+  - Added info regarding sorting "non-authored" bib-entries using the
+    "key" field in [thbib.bib].
+  - All-capitalized \chapter{INTRODUCTION} in [body.tex].
+  - Added [Dissertation_and_Thesis_Manual-2010-May-14.pdf]
+  - Added [Review-Checklist_Downloaded-2010-Sep-09.pdf]
+
+* Aug 2010 -- Peter Blomgren
+  - Corrected template to \submitdate{term year}
+  - Added note: Student name: has to match university record.
+  - Corrected template - copyright page: "Copyright symbol year"
+  - Corrected template: Chapter titles should be ALL CAPS
+  - Added note: Figures caption: Only the first word is capitalized
+    and there is a period at the end.  Also, there should be no space
+    between the bottom of the figure and the caption.
+  - Template conforms to: Table captions ON TOP of table; figure
+    captions BELOW figure
+
+
+MIDDLE History:
+
+* Missing
+
+
+OLD History:
+
+Changes in 2.0.1 - Jiri Lebl
+  - Dots in table of contents more closely spaced
+  - Killed the 12pt space after the (sub^n)section title
+  - Kill \parsep in the bibliography which was adding extra space between
+    entries
+  - Changed indentation in the table of contents
+  - Change \inofand to \switchofto
+  - Wrap long lines in the table of contents 1in instead of 0.7in from the
+    right side
+  - Add copyright symbol to copyright pages in the examples
+
+Changes in 2.0 - Jiri Lebl
+  - Remove all old cruft and pretty much rewrite the thing, note that it's
+    not compatible with the 1.0 version of the class and you will need to
+    change your files a little.  See the examples.  It's a lot more like
+    the `report' class right now.
+  - The library-abstract.tex is now gone as it's printed as part of your
+    thesis on the last page.  Use the `libraryabstract' environment.
+
+Changes in v1.0.2 - Jiri Lebl
+  - Fixes from M E OS
+  - Chapter and section headers are at most 4.5in wide
+  - Subsection is now implemented like section and is at most 3.5in wide
+  - ``fixed'' the table of contents auto header code and add one more baseline
+    skip just for being careful, also separate out the lot and lof tables
+    in this to make it work
+
+Changes in v1.0.1 - Jiri Lebl
+  - Fix top margin
+  - Fix centering of titles
+  - Killed the extra indentation in acknowledgment
+  - Made it possible to add fourth and fifth committee members
+
+
