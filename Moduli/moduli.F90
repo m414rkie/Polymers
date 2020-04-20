@@ -18,6 +18,7 @@ implicit none
 	real						 :: te ! temperature, user input
 	real						 :: junk ! For discarding some unneeded data
 	integer					 :: points ! Number of data points
+	real						 :: prev, now
 
 	integer					 :: i ! Looping integer
 	integer					 :: ioErr ! Error handling variable
@@ -59,9 +60,12 @@ end if
 mod_arr = 0.0
 
 ! Collect data
+prev = 0.0
 open(unit=15,file=trim(raw_in),status="old",action="read")
 data_in: do i = 1, points, 1
-	read(15,*) mast_arr(i,1), mast_arr(i,2), junk
+	read(15,*) mast_arr(i,1), now, junk
+	mast_arr(i,2) = now - prev
+	prev = now
 end do data_in
 
 call modulis(mast_arr,mod_arr,points,2,te)
@@ -89,7 +93,7 @@ subroutine modulis(ins,outs,dim1,dim2,temp)
 		real									:: freq
 
 ! Logorithmic derivative
-f(x,y,z,w) = (log(x)-log(y))/(2.0*(log(z)-log(w)))
+f(x,y,z,w) = (log(x-y))/((log(z-w)))
 
 ! Radius of particle
 radius = 0.5
@@ -102,13 +106,13 @@ do i = 2, dim1-1, 1
 	alpha = f(ins(i+1,2),ins(i-1,2),ins(i+1,1),ins(i,1))
 	gamm = gamma(1.0+alpha)
 
+	write(*,*) alpha, gamm
 	! Get complex moduli
 	Gstar = k_b*temp/(pi*radius*ins(i,2)*gamm)
 	! Storage and loss factors
 	G_prime = abs(Gstar)*cos(pi*alpha/2.0)
 	G2_prime = abs(Gstar)*sin(pi*alpha/2.0)
 
-	write(*,*) Gstar, G_prime, G2_prime, alpha, gamm
 	! Store for output
 	outs(i,1) = freq
 	outs(i,2) = G_prime
