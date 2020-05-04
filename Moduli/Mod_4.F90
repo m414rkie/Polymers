@@ -62,7 +62,7 @@ open(unit=15,file=trim(raw_in),status="old",action="read")
 prev = 0.0
 data_in: do i = 1, points, 1
 	read(15,*) mast_arr(i,1), new, junk
-	mast_arr(i,2) = new !new - prev
+	mast_arr(i,2) = new - prev
 	!write(*,*) !new-prev, prev, new
 	prev = new
 end do data_in

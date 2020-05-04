@@ -2,7 +2,7 @@
 ! and loss moduli from the MSD data contained in diff_out.dat.
 
 ! Version 2.0
-! - initial implementations
+
 
 ! Author: Jon Parsons
 ! Date 11-6-19
@@ -128,7 +128,7 @@ freq_loop: do i = 1, dim1-1, 1
 
 	! final computation
 	freq_mod = (cmplx(1.0,0.0) - cexp(cmplx(0.0,-freq_i*ins(1,1))))*cmplx(ins(1,2),0.0)/cmplx(ins(1,1),0.0) + &
-	 						(2.0*Diff_const)*cexp(cmplx(0.0,-freq_i*ins(dim1,1))) + sum_in
+	 						(Diff_const)*cexp(cmplx(0.0,-freq_i*ins(dim1,1))) + sum_in
 
 	! Isolate moduli
 	freq_mod = freq_mod/(-freq_i*freq_i)
