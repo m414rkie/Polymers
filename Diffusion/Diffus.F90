@@ -24,7 +24,8 @@ implicit none
 	real				  						:: tstep, numMols_r
 	integer										:: numMols
 	integer										:: numTsteps, t_cur
-	integer										:: num_files, lj_t
+	integer										:: num_files
+	real											:: lj_t
 	integer										:: ioErr
 	integer										:: i, j
 	integer										:: mol_num
@@ -123,12 +124,13 @@ file_iter_main: do i = 1, num_files, 1
 			open(unit=15,file=file_arr(i),status="old",action="read")
 			write(*,*) "Taking data from file ", file_arr(i)
 
-! Reads in the data and calls the clustering subroutine
+! Reads in the data
 out_loop: do
 
 	read(15,*,END=103)
 
 	read(15,*) tstep
+	! Avoid duplications of time data
 	if (tstep .eq. time_prev) then
 
 		read(15,*)
@@ -151,7 +153,6 @@ out_loop: do
 		read(15,*); read(15,*);
 		read(15,*); read(15,*); read(15,*);
 
-		!write(*,*) t_cur
 		t_cur = t_cur + 1
 
 		! Read in molecule data
@@ -222,8 +223,8 @@ bead_loop: do j = 1, dim1, 1
 	r1 = arr_in(j,1,i)
 	r2 = arr_in(j,1,i+1)
 	d = r2 - r1
-	! If displacement larger than 80% of box, make diffusion shortest path
-	if (abs(d) .gt. 0.8*xbx) then
+	! If displacement larger than 50% of box, make diffusion shortest path
+	if (abs(d) .gt. 0.5*xbx) then
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
@@ -243,8 +244,8 @@ bead_loop: do j = 1, dim1, 1
 	r1 = arr_in(j,2,i)
 	r2 = arr_in(j,2,i+1)
 	d = r2 - r1
-	! If displacement larger than 80% of box, make diffusion shortest path
-	if (abs(d) .gt. 0.8*ybx) then
+	! If displacement larger than 50% of box, make diffusion shortest path
+	if (abs(d) .gt. 0.5*ybx) then
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
@@ -264,8 +265,8 @@ bead_loop: do j = 1, dim1, 1
 	r1 = arr_in(j,3,i)
 	r2 = arr_in(j,3,i+1)
 	d = r2 - r1
-	! If displacement larger than 80% of box, make diffusion shortest path
-	if (abs(d) .gt. 0.8*zbx) then
+	! If displacement larger than 50% of box, make diffusion shortest path
+	if (abs(d) .gt. 0.5*zbx) then
 		! Displacement in positive direction
 		if (d .gt. 0.0) then
 			! Shift positions of this and all future values in x
@@ -294,11 +295,12 @@ subroutine diffuse(dim1,dim2,dim3,arr_in,f_step,lj_c)
 
 implicit none
 	integer,intent(in)		:: dim1, dim2, dim3 ! num. beads, xyz,num T steps
-	integer,intent(in)		:: f_step,lj_c
+	integer,intent(in)		:: f_step ! number of times to skip
+	real,intent(in)			  :: lj_c  ! number of LJ timesteps in each snapshot
 	real,intent(in)				:: arr_in(dim1,dim2,dim3) ! master array
 
 	integer								:: max_tau, max_stride, dtau ! Boundaries
-	integer								:: stride
+	integer								:: stride ! Current value of dt
 	integer								:: i, j, k! Looping integers
 	real									:: disp_arr_ti(dim3) ! holds disp. for each mol
 	real									:: st_dev
@@ -361,22 +363,23 @@ disp_tot = 0.0
 
 			end do coord_loop
 
+			! Average by number of beads
 			disp_avg_co = disp_avg_co/dim1
-
+			! Add to displacement by time
 			disp_avg_ti = disp_avg_ti + disp_avg_co
-
+			! Fill array
 			disp_arr_ti(i) = disp_avg_co
 
-
 		end do time_loop
-
+	! Average by number of times utilized
 	disp_avg_ti = disp_avg_ti/float(num_t_chk)
-
+	! Total displacement
 	disp_tot = disp_tot + disp_avg_ti
 
 	call std_dev(num_t_chk,disp_arr_ti(1:num_t_chk),st_dev)
 
-	write(16,*) dtau, disp_avg_ti, st_dev
+	write(16,*) dtau, disp_tot, st_dev
+	!write(16,*) dtau, disp_avg_ti, st_dev
 
 end do tau_loop
 
