@@ -38,7 +38,7 @@ x = 0.0
 y = 0.0
 z = 0.0
 
-num_beads = 12000
+num_beads = 1000
 
 write(*,*) "Number of timesteps to simulate:"
 read(*,*) numsteps

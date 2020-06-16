@@ -2,10 +2,10 @@
 ! and loss moduli from the MSD data contained in diff_out.dat.
 
 ! Version 3.0
-! - Directly from SI material instead of adapted from matlab code.
+! standard discrete fourier transform
 
 ! Author: Jon Parsons
-! Date 11-6-19
+! Date 6-6-2020
 
 program moduli
 
@@ -29,7 +29,6 @@ open(unit=15,file=trim(raw_in),status="old",action="read")
 
 points = 0
 read_loop: do
-
 	read(15,*,END=101)
 	points = points + 1
 end do read_loop
@@ -68,53 +67,43 @@ end program
 
 subroutine modulis(ins,outs,dim1,dim2)
 	implicit none
-		integer,intent(in)		:: dim1, dim2
-		real,intent(out)			:: outs(dim1-1,3)
-		real,intent(inout)		:: ins(dim1,dim2)
+		integer,intent(in)	:: dim1, dim2
+		real,intent(out)		:: outs(dim1-1,3)
+		real,intent(in)			:: ins(dim1,dim2)
 
-		real,parameter				:: pi = 3.14159 ! pi
-		real									:: om_i, d_t ! Initial frequency, spacing of samples
-		real									:: freq(dim1) ! Array holding frequencies
-		real									:: freq_i ! Current Frequency
-		real									:: d_freq ! Change in frequency value, used in fill
-		real									:: interim_val
+		real,parameter			:: pi = 3.14159 ! pi
+		real								:: freq_i ! Current Frequency
+		real								:: dt, df ! sample, frequency spacing
+		real								:: arg ! weighted angle
+		complex							:: ex_arg ! complex weighted angle
 
-		integer								:: i, j
-		complex								:: exp_arg ! Complex values
-		complex								:: loc_sum ! Placeholder values
-		complex								:: g_interim(dim1)
-		complex								:: freq_mod ! Holds complex moduli at a frequency
+		integer							:: i, j
+		complex							:: loc_sum ! Placeholder values
+		complex							:: g_interim(dim1) ! holds values
+		complex							:: freq_mod ! Holds complex moduli at a frequency
 
-! Generate frequencies
-om_i = 0.0
-d_freq = float(dim1)/2.0
-d_t = ins(2,1) - ins(1,1)
-
-freq_fill: do i = 1, dim1, 1
-	freq(i) = om_i + float(i)*d_freq/(float(dim1)*d_t)
-end do freq_fill
-
-
+outs = 0.0
+dt = ins(2,1) - ins(1,1)
+df = (2.0/(dt))/(float(dim1)) ! scaling
+write(*,*) "most freq:", 1.0/(2.0*dt)
 ! Loop over frequencies
 freq_loop: do i = 1, dim1-1, 1
 
 	! Set current Frequency
-	freq_i = freq(i)
+	freq_i = float(i)
 	! Begin Fourier Portion
+	loc_sum = (0.0,0.0)
+
 	sum_loop: do j = 1, dim1-1, 1
-		loc_sum = (0.0,0.0)
-		interim_val = 2.0*pi*float(j*i)/float(dim1)
-		exp_arg = cmplx(0.0,interim_val)
-		loc_sum = loc_sum + ins(j,2)*cexp(exp_arg)
+		arg = -2.0*pi*float(j)*freq_i/float(dim1)
+		ex_arg = cmplx(0.0,arg)
+		loc_sum = loc_sum + cmplx(ins(j,2))*cexp(ex_arg)
 	end do sum_loop
 
-	! Scale to frequency
-	freq_mod = cmplx(1.0,0.0)/(cmplx(0.0,freq_i)*pi*loc_sum)
+	g_interim(i) = 2.0*loc_sum/float(dim1)
 
-	g_interim(i) = d_t*freq_mod
-
-	! save frequency to out array
-	outs(i,1) = freq(i)
+	! adjust freq and save to out array
+	outs(i,1) = df*float(i)!freq_i
 
 end do freq_loop
 
@@ -136,7 +125,6 @@ subroutine outputs(outs,dim1,dim2)
 		integer								:: i
 
 open(unit=15,file="modulis.dat",status="replace",position="append")
-write(15,*)"w    G'    G''"
 do i = 1, dim1-1, 1
 	write(15,*) outs(i,1), outs(i,2), outs(i,3)
 end do

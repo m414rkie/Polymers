@@ -1,6 +1,7 @@
 data
 Documents
 presentation
+Thesis
 Analytics/32bdata
 Analytics/32cdata
 Analytics/32data
@@ -10,9 +11,11 @@ Analytics/32ddata
 *.x
 *.mod
 *.png
+*.jpg
 pict*
 bonds*
 *.dat
+
 
 Analytics/*.dat
 Analytics/*.png
@@ -26,3 +29,4 @@ Percent/*.dat
 python_xclx/*.dat
 Raddist/*.dat
 Second_half/*.dat
+
