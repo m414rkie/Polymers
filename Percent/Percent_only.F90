@@ -15,7 +15,7 @@ implicit none
 	integer							:: numBonds, numChains ! Number of molecules in system, ! Number of chains per molecule
 	integer							:: numTsteps ! Number of time steps looked at
 	integer							:: ioErr, j, i  ! System error variable, looping integer
-	real,allocatable		:: molData(:,:)    ! molnumber, moltype, x, y, z, cluster, molgroup
+	real,allocatable		:: molData(:,:)    ! molnumber 1, molnumber 2 
 	real,allocatable	  :: chainTrack(:)   ! This array tracks chain interactions
 	real								:: perc, perc_total ! Current Percentage, overall percentage
 	integer							:: chain_a, chain_b ! Which chains are involved
@@ -35,6 +35,7 @@ if (ioErr .ne. 0) then
 end if
 
 100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "Typical files will begin with the 'bonds' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
 read(*,*) filename
 
@@ -60,7 +61,7 @@ read(15,*); read(15,*)
 read(15,*)
 
 
-! Reads in the data and calls the clustering subroutine until EOF
+! Reads in the data and until EOF
 do
 
 	! Iterate timestep

@@ -53,6 +53,7 @@ if (ioErr .ne. 0) then
 end if
 
 file_in: do i = 1, num_files, 1
+	write(*,*) "Typical files will use the 'pict' prefix."
 	write(*,*) "Please enter the name of file", i
 	read(*,*) raw_in
 	file_arr(i) = trim(raw_in)
@@ -67,7 +68,7 @@ file_iter_time: do i = 1, num_files, 1
 			open(unit=15,file=file_arr(i),status="old",action="read")
 			write(*,*) "Reading file ", file_arr(i)
 
-! Reads in the data and calls the clustering subroutine
+! Reads in the data
 read_loop: do
 
 	read(15,*,END=101)
@@ -116,9 +117,7 @@ end if
 mast_arr = -1000.0
 
 ! Read in the data to master array
-
 time_prev = -1.0
-
 
 file_iter_main: do i = 1, num_files, 1
 			open(unit=15,file=file_arr(i),status="old",action="read")
@@ -312,13 +311,19 @@ implicit none
 	real									:: x1, x2, y1, y2, z1, z2
 	real									:: xd, yd, zd ! Axial distances
 
+	integer								:: first_five ! final indice that contains data
+																			! from the first 5% of the data
+
 	character*12					:: filename
 
 max_tau = lj_c*dim3
 max_stride = dim3/2
 
+first_five = floor(0.05*real(dim3))
+
 write(*,*) "Largest Tau available:", max_tau
 write(*,*) "Number of Strides checking:", max_stride
+write(*,*) "The first 5% of data consists of ", first_five, "entries"
 ! Each timestep is 50 tau
 
 filename = "diff_out.dat"
@@ -336,7 +341,7 @@ disp_avg = 0.0
 disp_tot = 0.0
 
 	! Iterate over time
-	time_loop: do i = 1, dim3-max_stride, f_step
+	time_loop: do i = first_five, dim3-max_stride, f_step
 
 			num_t_chk = num_t_chk + 1
 			disp_avg_co = 0.0

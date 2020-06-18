@@ -28,6 +28,7 @@ write(*,*) "Enter sigma:"
 read(*,*) sigma
 
 100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "Typical files will begin with the 'pict' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
 read(*,*) filename
 
@@ -103,7 +104,6 @@ write(*,*) "End of input file reached. Goodbye"
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 subroutine clusSort(arrin,dim1,dim2,dParam,maxClus,t)
 ! Subroutine to determine which molecules of the appropriate type are
 ! joined together in a cluster.
@@ -114,7 +114,7 @@ use chain_Functions
 implicit none
 	integer						 :: dim1,dim2 ! Dimensions of input array
 	real,intent(inout) :: arrin(dim1,dim2) ! Input array, holds output in last column
-	real,intent(in)		 :: dParam,  ! Distance parameter, sigma; timestep
+	real,intent(in)		 :: dParam,  ! Distance parameter
 
 	integer					 	 :: i, j, match ! Looping and the match integer
 	real							 :: whichClus, maxClus ! Determines the cluster number and highest cluster found
@@ -160,7 +160,7 @@ primLoop: do i = 1, dim1, 1
 	end if
 
 
-	! Checks for correct molecule type
+	! Checks for correct molecule type ; 2 := H
 	if (nint(arrin(i,2)) .ne. 2) then
 		cycle primLoop
 	end if

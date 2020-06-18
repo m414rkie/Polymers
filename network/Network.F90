@@ -38,6 +38,7 @@ end if
 
 ! User input
 100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "A file will typically begin with the 'bonds' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
 read(*,*) filename
 

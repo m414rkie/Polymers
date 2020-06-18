@@ -91,7 +91,7 @@ write(*,*) "Max Frequency: ", 1.0/(2.0*dt)
 freq_loop: do i = 1, dim1-1, 1
 
 	! Set current Frequency
-	freq_i = float(i)
+	freq_i = float(i)*2.0*pi
 	! Begin Fourier Portion
 	loc_sum = (0.0,0.0)
 
@@ -103,7 +103,7 @@ freq_loop: do i = 1, dim1-1, 1
 	end do sum_loop
 
 
-	g_interim(i) = cmplx(1.0,0.0)/(loc_sum*freq_i*cmplx(0.0,pi))
+	g_interim(i) = cmplx(1.0,0.0)/(loc_sum*2.0*pi*freq_i*cmplx(0.0,pi))
 	! scale freq and save to out array
 	outs(i,1) = freq_i*df
 
