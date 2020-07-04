@@ -4,12 +4,13 @@
 
 ! This version does not track chains, only beads
 
-! Version 5
+! Version 6
 ! - Reads indefinite number of files, user will supply the number and names
 ! 	of the datafiles.
 ! - Iterates over the stride to output data as avg diffusion - dtime (dtau)
 ! - Flattens data before passing to diffusion now.
 ! - Each stride has consistent numbers of points
+! - Disregards first 5% of data
 
 ! Now with periodic boundary handling
 
@@ -324,7 +325,6 @@ first_five = floor(0.05*real(dim3))
 write(*,*) "Largest Tau available:", max_tau
 write(*,*) "Number of Strides checking:", max_stride
 write(*,*) "The first 5% of data consists of ", first_five, "entries"
-! Each timestep is 50 tau
 
 filename = "diff_out.dat"
 

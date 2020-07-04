@@ -15,7 +15,7 @@ implicit none
 	integer							:: numBonds, numChains ! Number of molecules in system, ! Number of chains per molecule
 	integer							:: numTsteps ! Number of time steps looked at
 	integer							:: ioErr, j, i  ! System error variable, looping integer
-	real,allocatable		:: molData(:,:)    ! molnumber 1, molnumber 2 
+	real,allocatable		:: molData(:,:)    ! molnumber 1, molnumber 2
 	real,allocatable	  :: chainTrack(:)   ! This array tracks chain interactions
 	real								:: perc, perc_total ! Current Percentage, overall percentage
 	integer							:: chain_a, chain_b ! Which chains are involved
@@ -59,7 +59,6 @@ read(15,*) numBonds
 read(15,*); read(15,*)
 read(15,*); read(15,*)
 read(15,*)
-
 
 ! Reads in the data and until EOF
 do
@@ -123,7 +122,8 @@ do
 
 end do
 
-101 perc_total = perc_total/float(numTsteps)
+101 close(15)
+perc_total = perc_total/float(numTsteps)
 
 open(unit=18,file="Percentages.dat",status="unknown",position="append")
 write(18,*) "Overall Percentage:", perc_total

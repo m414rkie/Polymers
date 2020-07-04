@@ -1,6 +1,6 @@
 ! Program takes an output file from the LAMMPS software package and
-! reads in the linked beads. The program then builds a picture of
-! the linked chains
+! reads in the linked beads from a bonds file. The program then builds a picture
+! of the clusters of chains formed.
 
 ! Author: Jon Parsons
 ! Date: 5-21-19
@@ -16,11 +16,8 @@ implicit none
 	integer							:: first,ClusFound	! Tracks if this is first time output subroutine is called
 	integer							:: ioErr, j  ! System error variable, looping integer
 	real,allocatable		:: molData(:,:)    ! molnumber, moltype, x, y, z, cluster, molgroup
-	integer							:: statsArr(10)	   ! Tracks number of clusters with (2,3,4...) chains involved
+	integer							:: statsArr(2000)	   ! Tracks number of clusters with (2,3,4...) chains involved
 	integer,allocatable	:: chainTrack(:)   ! This array tracks chain interactions
-!	integer,allocatable :: chainBranch(:,:) ! This array is to be used to tracked how networked the system is
-	 																				! dim1 is which chain and which end
-																					! dim2 is the chains attached to that chain
 
 ! Number of chains in the system
 numChains = 2000
@@ -38,6 +35,7 @@ if (ioErr .ne. 0) then
 end if
 
 100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "Files will typically include the 'bonds' prefix"
 write(*,*) "If the file is not in this directory enter the full path."
 read(*,*) filename
 
@@ -61,7 +59,6 @@ read(15,*) numBonds
 read(15,*); read(15,*)
 read(15,*); read(15,*)
 read(15,*)
-
 
 ! Reads in the data and calls the clustering subroutine until EOF
 do
@@ -113,7 +110,8 @@ do
 
 end do
 
-101 first = 2
+101 close(15)
+first = 2 ! set flag to final output
 
 call statistics(statsArr,first,numTsteps,perc)
 
@@ -195,14 +193,16 @@ implicit none
 	integer,intent(in)	  :: chainIn(chDim) ! Working array, row values are chains, column values are cluster value
 	integer,intent(in)	  :: flag, maxClus ! Flag for first call, maximum number of clusters found
 	real,intent(in)		    :: t ! Current timestep
-	integer,intent(inout)	:: numchains(10) ! Array for holding how many clusters have 2, 3, etc chains
+	integer,intent(inout)	:: numchains(2000) ! Array for holding how many clusters have 2, 3, etc chains
 	real,intent(inout)		:: perc_tot
 
 	integer				:: i, j ! Looping integers
 	integer				:: chainsIn, cluster ! temporary values for holding
 	logical				:: chain_count(chDim) ! Will hold number of chains involved for counting
+	logical				:: chain_no_clus(chDim) ! holds chains that are not in a cluster
 	integer				:: in_count ! Collapsed number of chains involved
 	real					:: perc_chains ! Percentage of chains
+	integer				:: num_not_assoc ! number of chains not associated with a cluster
 
 ! Open files
 open(unit=11,file="Clusters.dat",status="unknown",position="append")
@@ -223,6 +223,10 @@ chain_count = (chainIn .ne. 0)
 in_count = count(chain_count)
 perc_chains = float(in_count)/float(chDim)
 perc_tot = perc_tot + perc_chains
+! find number of chains not in a cluster, assign to the output
+chain_no_clus = (chainIn .eq. 0)
+num_not_assoc = count(chain_no_clus)
+numchains(1) = num_not_assoc
 ! Iterate through the clusters
 ReadLoop: do i = 1, maxClus, 1
 
@@ -245,12 +249,12 @@ ReadLoop: do i = 1, maxClus, 1
 		write(12,*) cluster, chainsIn
 		cluster = cluster + 1 ! Iterate cluster number for writing
 
-		! If more than 10 chains in cluster, assign to 10+ box, inform user
-		if (chainsIn .ge. 11) then
-			numchains(10) = numchains(10) + 1
-		! All else write to appropriate box
-		else if ((chainsIn .ge. 2).and.(chainsIn .le. 10)) then
-			numchains(chainsIn-1) = numchains(chainsIn-1) + 1
+		! If more than 14 chains in cluster, assign to 14+ box, inform user
+		if (chainsIn .ge. 2000) then
+			numchains(2000) = numchains(2000) + 1
+		! All else write to appropriate bo
+	else if ((chainsIn .ge. 2).and.(chainsIn .le. 2000)) then
+			numchains(chainsIn) = numchains(chainsIn) + 1
 		else
 			write(*,*) "Cluster with chains outside of parameters found."
 		end if
@@ -259,7 +263,7 @@ ReadLoop: do i = 1, maxClus, 1
 
 	! Write timestep and total number of clusters to file
 	if (i .eq. maxClus) then
-		write(11,*) t, cluster, perc_chains
+		write(11,*) t, (cluster-1), perc_chains
 	end if
 
 end do ReadLoop
@@ -275,7 +279,7 @@ subroutine statistics(statsArr,flag,numsteps,perc_tot)
 ! Find some statistics about clusters
 
 implicit none
-	integer,intent(in)		:: statsArr(10) ! Holds number of clusters of size 2, 3, etc
+	integer,intent(in)		:: statsArr(2000) ! Holds number of clusters of size 1, 2 etc
 	integer,intent(in)		:: flag ! First time flag
 	integer,intent(in)		:: numsteps ! Number of timesteps
 	real									:: perc_tot ! Overall percentage of chains in a cluster
@@ -283,77 +287,70 @@ implicit none
 	integer					:: i ! Looping integer
 
 	integer					:: n ! Will hold total number of clusters
-	real			 		  :: num, num_sq ! total chains and total chains squared
-	real					  :: mean, std_dev, variance
-	real					  :: numavg(10) ! For printing
+	real, save 		  :: num, num_sq ! total chains and total chains squared
+	real, save		  :: mean, std_dev, variance
+	real, save			:: unbound_avg
+	real, save		  :: numavg(2000) ! For printing
 
-
+! first call initializations
 if (flag .eq. 0) then
 	num = 0
 	num_sq = 0
 	mean = 0
 	std_dev = 0
 	variance = 0
-	n = 0
 	numavg = 0
+	unbound_avg = 0
 end if
-
-n = 0
-num = 0
-num_sq = 0
-
-
-! Global stuff
-! x
-
-	do i = 1, 10, 1
-		num = num + float((i+1)*statsArr(i))
+! Value updates
+if (flag .le. 1) then
+	n = 0
+	num = 0.0
+	num_sq = 0.0
+	! Global stuff
+	! x
+	unbound_avg = unbound_avg + statsArr(1)
+	numavg(1) = numavg(1) + statsArr(1)
+	do i = 2, 2000, 1
+		num = num + float((i)*statsArr(i))
 		numavg(i) = numavg(i) + statsArr(i)
 		n = n + statsArr(i)
 	end do
 
-! x^2
-	do i = 1, 10, 1
-		num_sq = num_sq + (float((i+1)*statsArr(i))**2)
+	! x^2
+	do i = 2, 2000, 1
+		num_sq = num_sq + (float((i)*statsArr(i))**2)
 	end do
 
+	! mean
+	mean = mean + num/float(n)
 
-! mean
-	mean = num/float(n)
+	! variance
+	variance = variance + (num_sq - (num*num/float(n)))/float(n)
 
-! variance
-	variance = ((1.0/(float(n)-1))*(num_sq - (1.0/float(n))*(num*num)))
+	write(*,*) "Summed mean", mean, n, variance
 
-! std deviation
-	std_dev =  sqrt(variance)
-
-write(*,*) "mean", mean
-write(*,*) "n", n
-write(*,*) "num", num
-
-
-
+end if
+! Final call only
 if (flag .gt. 1) then
 
-	write(*,*) "Statistics"
-
-	perc_tot = perc_tot/numsteps
+	write(*,*) "Statistics Output in file 'Averages.dat'"
 
 	open(unit=13,file="Averages.dat",status="replace",position="append")
 
-	write(13,*) "Average: ", mean
-	write(13,*) "Std devation: ", std_dev
-	write(13,*) "Avg. Percentage: ", perc_tot
+	std_dev = sqrt(variance)
 
+	write(13,*) "Total Time Steps: ", numsteps
+	write(13,*) "Average Size: ",(mean/float(numsteps))
+	write(*,*) "Average Size: ", (mean/float(numsteps))
+	write(13,*) "Std devation: ", (std_dev/float(numsteps))
+	write(13,*) "Avg. Percentage: ", (perc_tot/float(numsteps))
+	write(13,*) "Avg. Unbonded Chains: ", (unbound_avg/float(numsteps))
+	! Output for box plot
 	write(13,*) "Box Plot"
-	do i = 1, 10, 1
-		write(13,'(1i10)',advance="no") (i+1)
+	do i = 1, 2000, 1
+		write(13,*) i, numavg(i)/float(numsteps)
 	end do
-	write(13,*)
-	do i = 1, 10 ,1
-		write(13,'(1f10.2)', advance="no") numavg(i)
-	end do
-
 	close(13)
 
 end if

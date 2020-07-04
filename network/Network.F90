@@ -137,11 +137,12 @@ implicit none
 
 	integer						 :: i, j ! Looping integers
 	integer						 :: chainend_a, chainend_b ! Chain endgroups of interest
-	real							 :: num_chains, num_connects ! Number of chains and number of connections
+	real							 :: num_con_chains, num_connects ! Number of chains with clusters
+	 												! and number of connections to a particular chain end
 	real							 :: avg_connects ! Average number of connections
 
 ! Initialize
-num_chains = 0.0
+num_con_chains = 0.0
 num_connects = 0.0
 
 ! Loop through bonds passed in through dat_in
@@ -178,7 +179,7 @@ check_loop: do i = 1, n_in1, 1
 	if (net_arr(i,1) .eq. 0) then
 			cycle check_loop
 	else if (net_arr(i,1) .ne. 0) then
-			num_chains = num_chains + 1.0 ! Add one to total number of chains involved
+			num_con_chains = num_con_chains + 1.0 ! Add one to total number of chains involved
 
 			do j = 1, n_in2, 1
 				if (net_arr(i,j) .ne. 0) then
@@ -192,7 +193,7 @@ end do check_loop
 
 ! Find average number of connections per chain. If a chain is not involved in a cluster,
 ! it is not counted towards this.
-avg_connects = num_connects/num_chains
+avg_connects = num_connects/num_con_chains
 
 tavg = tavg + avg_connects
 

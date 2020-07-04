@@ -15,6 +15,11 @@ Analytics/32ddata
 pict*
 bonds*
 *.dat
+*.pdf
+*.log
+*.tex
+*.gz
+*.aux
 
 
 Analytics/*.dat

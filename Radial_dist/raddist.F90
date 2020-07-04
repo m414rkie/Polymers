@@ -2,6 +2,8 @@
 ! reads in the location and type of each molecule. From this, the radial
 ! distance function is determined from xyz data given in the input file.
 
+! periodic boundaries rehandled
+
 ! Author: Jon Parsons
 ! Date: 2-1-19
 
@@ -29,6 +31,9 @@ write(*,*) "Please choose which bond type to examine."
 write(*,*) "Hydrogen (H), or Sulfide (S)"
 read(*,*) type
 ! Parse
+
+call chartoup(type,type)
+
 if (type .eq. 'H') then
 	bead_type = 2
 else
@@ -140,6 +145,7 @@ subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,r_max,vol,xbx,ybx,zbx,t,btype)
 ! Subroutine to determine the radial distribution function at each step.
 
 use functions
+use chain_Functions
 
 implicit none
 	integer,intent(in)		:: dim1, dim2  ! Dimensions of input array
@@ -151,7 +157,7 @@ implicit none
 	real,intent(inout)		:: arrout(r_num) ! Holds the values for the radial distribution function
 	real									:: arrout_temp(r_num)  ! holds values for current timestep
 	integer								:: i, d, j  ! Looping integers
-	integer								:: h_count_tot, sh_count ! Holds number of h-bond beads in total total
+	integer								:: count_tot, sh_count ! Holds number of h-bond beads in total total
 	real									:: dr, xi, xj, yi, yj, zi, zj ! increase in radius, x y z coordinate holding
 	real									:: xd, yd, zd ! Axial distance of each pair of beads
 	real									:: r, distance ! Distance being considered, distance from i-th particle
@@ -172,7 +178,7 @@ arrout_temp = 0.0
 dr = r_max/(float(r_num))
 
 ! Initialize counting variables
-h_count_tot = 0
+count_tot = 0
 sh_count = 0
 
 ! Bead being considered
@@ -184,7 +190,7 @@ outer_loop : do i = 1, dim1, 1
 		end if
 
 		! Add bead to total number of beads
-		h_count_tot = h_count_tot + 1
+		count_tot = count_tot + 1
 
 		! Bead 1's (x,y,z) coord's
 		xi = arrin(i,3)
@@ -204,8 +210,8 @@ outer_loop : do i = 1, dim1, 1
 						cycle inner_loop
 					end if
 
-						! skip if same chain
-						if (chain(arrin(i,1)) .eq. chain(arrin(j,1))) then
+						! skip if same chainhalf
+						if (chainEnds(nint(arrin(i,1))) .eq. chainEnds(nint(arrin(j,1)))) then
 							cycle inner_loop
 						end if
 
@@ -221,28 +227,16 @@ outer_loop : do i = 1, dim1, 1
 						!! Periodic Boundary check, if it is closer to go through the
 						! boundary wall this section does so.
 								! X dimension check
-								if (abs(xd) .ge. xbx) then
-									if (xd .gt. 0) then
-										xd = xd - xbx
-									else
-										xd = xd + xbx
-									end if
+								if (xd .ge. xbx) then
+									xd = xd - xbx
 								end if
 								! Y dimension check
-								if (abs(yd) .ge. ybx) then
-									if (yd .gt. 0) then
-										yd = yd - ybx
-									else
-										yd = yd + ybx
-									end if
+								if (yd .ge. ybx) then
+									yd = yd - ybx
 								end if
 								! Z dimension check
-								if (abs(zd) .ge. zbx) then
-									if (zd .gt. 0) then
-										zd = zd - zbx
-									else
-										zd = zd + zbx
-									end if
+								if (zd .ge. zbx) then
+									zd = zd - zbx
 								end if
 
 						distance = dist(xd,yd,zd)
@@ -271,16 +265,14 @@ do d = 1, r_num, 1
 end do
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
-arrout_temp = arrout_temp*vol/h_count_tot
-arrout_temp = arrout_temp/h_count_tot
+arrout_temp = arrout_temp*vol/count_tot
+arrout_temp = arrout_temp/count_tot
 
 
 ! User output
-write(*,*) "total beads", h_count_tot
-write(*,*) "Beads counted", sh_count
-write(*,*) "sum", sum(arrout_temp)
-write(*,*) "vol", vol
-write(*,*) "dr", dr
+write(*,*) "total beads of desired type:", count_tot
+write(*,*) "Beads counted:", sh_count
+write(*,*) "Density sum:", sum(arrout_temp)
 
 ! Add current array to total array. After all timesteps are checks this will be
 ! time-averaged and output
@@ -339,5 +331,26 @@ do i = 1, r_num, 1
 end do
 
 close(18)
+
+end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine chartoup(stringin,stringout)
+! converts text input to upper case
+
+implicit none
+	character(*)					   :: stringin ! string to adjust
+	character(len(stringin)) :: stringout ! capitalized string
+	integer									 :: i, j ! looping integer, iachar indice value
+
+do i = 1, len(stringin), 1 ! loop through string
+	j = iachar(stringin(i:i)) ! get iachar indice
+		! replace with uppercase version if needed
+		if(j .ge. iachar("a") .and. j .le. iachar("z")) then
+			stringout(i:i) = achar(iachar(stringin(i:i))-32)
+		else
+			stringout(i:i) = stringin(i:i)
+		end if
+end do
 
 end subroutine
