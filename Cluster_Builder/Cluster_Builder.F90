@@ -307,6 +307,7 @@ if (flag .le. 1) then
 	n = 0
 	num = 0.0
 	num_sq = 0.0
+	
 	! Global stuff
 	! x
 	unbound_avg = unbound_avg + statsArr(1)

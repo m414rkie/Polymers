@@ -30,8 +30,8 @@ implicit none
 write(*,*) "Please choose which bond type to examine."
 write(*,*) "Hydrogen (H), or Sulfide (S)"
 read(*,*) type
-! Parse
 
+! Parse
 call chartoup(type,type)
 
 if (type .eq. 'H') then
@@ -73,7 +73,7 @@ yd = boxDim(2,2) - boxDim(2,1)
 zd = boxDim(3,2) - boxDim(3,1)
 vol = xd*yd*zd
 
-r_max = sqrt((0.5*xd)**2+(0.5*yd)**2+(0.5*zd)**2)
+r_max = sqrt((0.75*xd)**2 + (0.75*yd)**2 + (0.75*zd)**2)
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
 r_num = ceiling(r_max)
@@ -116,7 +116,6 @@ do
 
 	! Call distribution subroutine
  	call rad_dist(moldata,numMols,7,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,bead_type)
-
 	deallocate(molData)
 
 	! Checks for EOF, if not then reads and discards header data for next step
@@ -206,52 +205,62 @@ outer_loop : do i = 1, dim1, 1
 					end if
 
 					! skip if same bead as 1
+					distance = dist(xd,yd,zd)
+
+					! Set bead into correct distance box
+					d = nint(distance)
+
+					! Should not happen, but will prevent crashing in rare cases
+					if (d .gt. r_num) then
+							d = r_num
+					end if
+
 					if (j .eq. i) then
 						cycle inner_loop
 					end if
 
-						! skip if same chainhalf
-						if (chainEnds(nint(arrin(i,1))) .eq. chainEnds(nint(arrin(j,1)))) then
-							cycle inner_loop
-						end if
+					! skip if same chainhalf
+					if (chainEnds(nint(arrin(i,1))) .eq. chainEnds(nint(arrin(j,1)))) then
+						cycle inner_loop
+					end if
 
-						! Bead 2's (x,y,z) coord's
-						xj = arrin(j,3)
-						yj = arrin(j,4)
-						zj = arrin(j,5)
+					! Bead 2's (x,y,z) coord's
+					xj = arrin(j,3)
+					yj = arrin(j,4)
+					zj = arrin(j,5)
+					! axial distances
+					xd = abs(xj - xi)
+					yd = abs(yj - yi)
+					zd = abs(zj - zi)
 
-						xd = xj - xi
-						yd = yj - yi
-						zd = zj - zi
+					!! Periodic Boundary check, if it is closer to go through the
+					! boundary wall this section does so.
+					! X dimension check
+					if (xd .ge. xbx) then
+						xd = xd - xbx
+					end if
+					! Y dimension check
+					if (yd .ge. ybx) then
+						yd = yd - ybx
+					end if
+					! Z dimension check
+					if (zd .ge. zbx) then
+						zd = zd - zbx
+					end if
 
-						!! Periodic Boundary check, if it is closer to go through the
-						! boundary wall this section does so.
-								! X dimension check
-								if (xd .ge. xbx) then
-									xd = xd - xbx
-								end if
-								! Y dimension check
-								if (yd .ge. ybx) then
-									yd = yd - ybx
-								end if
-								! Z dimension check
-								if (zd .ge. zbx) then
-									zd = zd - zbx
-								end if
+					distance = dist(xd,yd,zd)
 
-						distance = dist(xd,yd,zd)
+					! Set bead into correct distance box
+					d = nint(distance)
 
-						! Set bead into correct distance box
-						d = nint(distance)
+					! Should not happen, but will prevent crashing in rare cases
+					if (d .gt. r_num) then
+							d = r_num
+					end if
 
-						! Should not happen, but will prevent crashing in rare cases
-						if (d .gt. r_num) then
-								d = r_num
-						end if
-
-						! Distance box plus one
-						arrout_temp(d) = arrout_temp(d) + 1.0
-						sh_count = sh_count + 1
+					! Distance box plus one
+					arrout_temp(d) = arrout_temp(d) + 1.0
+					sh_count = sh_count + 1
 
 			end do inner_loop
 

@@ -14,9 +14,9 @@ implicit none
 	real								:: tstep, junk ! Distance parameter, number of clusters found, cuurent timestep
 	integer							:: numBonds, numChains ! Number of molecules in system, ! Number of chains per molecule
 	integer							:: numTsteps ! Number of time steps looked at
-	integer							:: ioErr, j, i  ! System error variable, looping integer
-	real,allocatable		:: molData(:,:)    ! molnumber 1, molnumber 2
-	real,allocatable	  :: chainTrack(:)   ! This array tracks chain interactions
+	integer							:: ioErr, j, i ! System error variable, looping integer
+	real,allocatable		:: molData(:,:) ! molnumber 1, molnumber 2
+	real,allocatable	  :: chainTrack(:) ! This array tracks chain interactions
 	real								:: perc, perc_total ! Current Percentage, overall percentage
 	integer							:: chain_a, chain_b ! Which chains are involved
 
