@@ -76,8 +76,6 @@ do
 		stop
 	end if
 
-	write(*,*) "Beginning time:", tstep
-
 	! Initial values, to be over-ridden
 	molData = 0.0
 	chainBranch = 0
@@ -89,7 +87,7 @@ do
 
 	end do fileread
 
-	call network(molData,chainBranch,numBonds,2,2*numChains,10,tavg_conn)
+	call network(molData,chainBranch,numBonds,2,2*numChains,10,tavg_conn,numTsteps)
 	first = 1
 
 	deallocate(molData)
@@ -123,27 +121,28 @@ write(*,*) "End of input file reached. Goodbye"
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine network(dat_in,net_arr,d_in1,d_in2,n_in1,n_in2,tavg)
+subroutine network(dat_in,net_arr,d_in1,d_in2,n_in1,n_in2,tavg,Tstep)
 
 use functions
 use chain_Functions
 
 implicit none
 	integer,intent(in)		:: d_in1, d_in2, n_in1, n_in2	! Dimensions of arrays
+													! # bonds, 2, # endgroups, 10
+	integer,intent(in)		:: Tstep ! current timestep
 	real,intent(in)			 	:: dat_in(d_in1,d_in2) ! moldata and network data
 	integer,intent(inout) :: net_arr(n_in1,n_in2) ! Holds which chains are attached to which endgroups
 	real,intent(inout)		:: tavg
 
-	integer						 :: i, j ! Looping integers
-	integer						 :: chainend_a, chainend_b ! Chain endgroups of interest
-	real							 :: num_con_chains, num_connects ! Number of chains with clusters
-	 												! and number of connections to a particular chain end
-	real							 :: avg_connects ! Average number of connections
+	integer		:: i, j ! Looping integers
+	integer		:: chainend_a, chainend_b ! Chain endgroups of interest
+	real			:: num_con_chains, num_connects ! Number of chains with clusters
+	 						! and number of connections to a particular chain end
+	real			:: avg_connects ! Average number of connections
+	real			:: tot_connects, max_connects ! total connections, largest grouping
+	real			:: max_interim ! temp counter
+	real			:: sizes(n_in2)
 
-! Initialize
-num_con_chains = 0.0
-num_connects = 0.0
 
 ! Loop through bonds passed in through dat_in
 bond_loop: do i = 1, d_in1, 1
@@ -158,51 +157,79 @@ bond_loop: do i = 1, d_in1, 1
 	end if
 
 	! Connect chains (disallow same chain twice) in the net_arr
-	link_loop: do j = 1, d_in2, 1
-				! If chains are already connected, skip
-				if (chainend_b .eq. net_arr(chainend_a,j)) then
-					cycle bond_loop
-				end if
-				! If chains are not already connected, allow and move to the next.
-				if (net_arr(chainend_a,j) .eq. 0) then
-					net_arr(chainend_a,j) = chainend_b
-					exit link_loop
-				end if
-
-	end do link_loop
+	! Loop for attaching chain end a to chain end b
+	link_loop_b: do j = 1, d_in2, 1
+		! If chains are already connected at that end, skip
+		if (chainend_a .eq. net_arr(chainend_b,j)) then
+			exit link_loop_b
+		end if
+		! If chains are not already connected, allow and move to the next
+		if (net_arr(chainend_b,j) .eq. 0) then
+			net_arr(chainend_b,j) = chainend_a
+			exit link_loop_b
+		end if
+	end do link_loop_b
+	! Loop for attaching chain end b to chain end a
+	link_loop_a: do j = 1, d_in2, 1
+		! If chains are already connected at that end, skip
+		if (chainend_b .eq. net_arr(chainend_a,j)) then
+			exit link_loop_a
+		end if
+		! If chains are not already connected, allow and move to the next.
+		if (net_arr(chainend_a,j) .eq. 0) then
+			net_arr(chainend_a,j) = chainend_b
+			exit link_loop_a
+		end if
+	end do link_loop_a
 
 end do bond_loop
 
-! Count number of connections
+! Count number of connections for outputs
+! Initialize
+max_interim = 0.0
+num_con_chains = 0.0
+num_connects = 0.0
+max_connects = 0
 check_loop: do i = 1, n_in1, 1
-	! IF the chain end group has no connections, skip
+	! If the chain end group has no connections, skip
 	if (net_arr(i,1) .eq. 0) then
 			cycle check_loop
 	else if (net_arr(i,1) .ne. 0) then
-			num_con_chains = num_con_chains + 1.0 ! Add one to total number of chains involved
-
-			do j = 1, n_in2, 1
-				if (net_arr(i,j) .ne. 0) then
-						num_connects = num_connects + 1 ! Add one for each additional chain
-																							! to the total number of connections
-				end if
-			end do
+		num_con_chains = num_con_chains + 1.0 ! Add one to total number of ends involved
+		max_interim = 0.0
+		do j = 1, n_in2, 1
+			if (net_arr(i,j) .ne. 0) then
+				num_connects = num_connects + 1.0 ! Add one for each additional chain
+																				! to the total number of connections
+				max_interim = max_interim + 1.0 ! interim count of connections
+			end if
+		end do
+		! assign +1 to bin with appropriate size
+		sizes(nint(max_interim)) = sizes(nint(max_interim)) + 1
+		if (max_interim .gt. max_connects) then ! update max connections
+			max_connects = max_interim
+		end if
 	end if
-
 end do check_loop
 
 ! Find average number of connections per chain. If a chain is not involved in a cluster,
 ! it is not counted towards this.
 avg_connects = num_connects/num_con_chains
-
 tavg = tavg + avg_connects
 
 ! File output
 open(unit=16,file="network.dat",status="unknown",position="append")
 
 ! Output
-write(*,*) "Avg. Connections: ", avg_connects
+write(16,*) "Timestep: ", Tstep
+write(16,*) "Connected Chain Endgroups: ", num_con_chains
+write(16,*) "Total Connections: ", num_connects
+write(16,*) "Largest Group: ", max_connects
 write(16,*) "Avg. Connections: ", avg_connects
+write(16,*) "Time Averaged Size: ", tavg/float(Tstep)
+write(16,*) "Size Breakdown"
+write(16,*) "1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10"
+write(16,*) sizes
 
 close(16)
 
