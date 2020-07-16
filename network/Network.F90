@@ -117,6 +117,7 @@ write(17,*) "Average number of Connections (total):", tavg_conn
 close(17)
 
 write(*,*) "Number of timesteps checked:", numTsteps
+write(*,*) "Data found in 'network.dat'"
 write(*,*) "End of input file reached. Goodbye"
 
 end program
@@ -191,23 +192,25 @@ max_interim = 0.0
 num_con_chains = 0.0
 num_connects = 0.0
 max_connects = 0
-check_loop: do i = 1, n_in1, 1
+check_loop: do i = 1, n_in1, 1 ! loops through the chain end groups
 	! If the chain end group has no connections, skip
 	if (net_arr(i,1) .eq. 0) then
 			cycle check_loop
 	else if (net_arr(i,1) .ne. 0) then
 		num_con_chains = num_con_chains + 1.0 ! Add one to total number of ends involved
 		max_interim = 0.0
-		fit_loop:	do j = 1, n_in2, 1
+		fit_loop:	do j = 1, n_in2, 1 ! add connections to th elist
 			if (net_arr(i,j) .ne. 0) then
-				double_loop:	do k = 1, j, 1 ! skip over double linked chains.
+				double_loop:	do k = 1, j-1, 1 ! skip over double linked chains.
 					if ((net_arr(i,j) .eq. net_arr(i,k)) .and. (j .gt. 1)) then
 						cycle fit_loop
 					end if
 				end do double_loop
-					num_connects = num_connects + 1.0 ! Add one for each additional
+				num_connects = num_connects + 1.0 ! Add one for each additional
 					 											! chain to the total number of connections
-					max_interim = max_interim + 1.0 ! interim count of connections
+				max_interim = max_interim + 1.0 ! interim count of connections
+			else if (net_arr(i,j) .eq. 0) then ! move on to the next when out of
+				cycle fit_loop									! chains to attach
 			end if
 		end do fit_loop
 		! assign +1 to bin with appropriate size
