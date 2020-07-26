@@ -9,7 +9,7 @@ program clusfinder
 
 implicit none
 	character*50, allocatable	:: file_arr(:)  ! Holds names of input files
-	character*50					:: raw_in ! Name of input file
+	character*50							:: raw_in ! Name of input file
 	integer, allocatable	:: bond_time(:), bead_pairs(:,:) ! Number of bonds at
 																! each timestep ; bead pairs at time (t,b1,b2)
 	integer						:: num_files, tot_time_Steps ! number of input files; total
@@ -25,14 +25,12 @@ implicit none
 	integer						:: ioErr
 	integer,allocatable	:: statsArr(:,:) ! Tracks number of clusters with
 																	! (2,3,4...) chains involved at each timestep
-	integer,allocatable	:: chainTrack(:,:) ! This array tracks chain
-																					! interactions at each timestep
+	integer,allocatable	:: chainTrack(:,:), chain_ends(:,:) ! These arrays track
+	                        ! chain interactions at each timestep
 
 ! Number of chains in the system, largest cluster to look for
 numChains = 2000
 lrg_track = 100
-! Inititalization
-bonds_read = 0
 
 ! get number of files to read
 write(*,*) "Please enter the number of files with data"
@@ -119,6 +117,14 @@ if (AllErr .ne. 0) then
 	write(*,*) "Failed to allocate the chain tracking array. Exiting."
 	stop
 end if
+chainTrack = 0
+! Chain Ends
+allocate(chain_ends(tot_time_steps,2*numChains), stat = AllErr)
+if (AllErr .ne. 0) then
+	write(*,*) "Failed to allocate the chain end tracking array"
+	stop
+end if
+chain_ends = 0
 ! Number of clusters of each size
 allocate(statsArr(tot_time_steps,lrg_track), stat = AllErr)
 if (AllErr .ne. 0) then
@@ -128,6 +134,7 @@ end if
 
 ! get the data into the arrays
 time_int = 0
+bonds_read = 0
 file_input: do i = 1, num_files, 1
 
 	open(unit=15, file=file_arr(i), status='old', action='read')
@@ -156,9 +163,11 @@ file_input: do i = 1, num_files, 1
 
 end do file_input
 
+write(*,*) "Building Clusters"
 call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
-																																		chainTrack)
+																													chainTrack,chain_ends)
 write(*,*) "Preparing Outputs"
+call linloop(numChains,tot_time_steps,chain_ends)
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
 call statistics(tot_time_steps,lrg_track,statsArr)
 
@@ -168,7 +177,7 @@ end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine ClusBuilder(num_bonds,dim2a1,num_tsteps,chain_amt,bond_arr, &
-																															bond_time,chainIn)
+																									bond_time,chainIn,chain_ends)
 ! Builds the clusters at each timestep.
 ! output array is chainIn.
 
@@ -183,10 +192,12 @@ implicit none
 	integer,intent(in)		:: bond_time(num_tsteps) ! Array with number of bonds
 																									! at each timestep
 	integer,intent(inout)	:: chainIn(num_tsteps,chain_amt)
+	integer,intent(inout) :: chain_ends(num_tsteps,2*chain_amt)
 	integer		:: curClus, maxClus ! Current working cluster, number of
 																			! clusters found in total
 	integer		:: i, j ! Looping integers
 	integer		:: bonds_counted
+	integer		:: clus_a, clus_b
 
 ! Initialize
 bonds_counted = 0
@@ -200,49 +211,64 @@ time_loop: do i = 1, num_tsteps, 1
 	! Build the clusters
 	ClusLoop : do j = bonds_counted + 1, bonds_counted+bond_time(i), 1
 
+		! Ensure we are on the correct timestep
 		if (bond_arr(j,1) .ne. i) then
 			write(*,*) "Error in timestep tracking. Should be", i,"Is ", bond_arr(j,1)
+			cycle ClusLoop
+		end if
+
+		! skip if on same end of a chain
+		if (chainEnds(bond_arr(j,2)) .eq. chainEnds(bond_arr(j,3))) then
 			cycle ClusLoop
 		end if
 
 		! Set working cluster to largest cluster
 		curClus = maxClus
 
-		! If both beads are in same chain, skip
-		if (chain(float(bond_arr(j,2))) .eq. chain(float(bond_arr(j,3)))) then
-			cycle ClusLoop
-		end if
-
 		! If both chains are not involved in a cluster, put them in new cluster
-		if ((chainIn(j,chain(float(bond_arr(j,2)))) .eq. 0).and. &
-													(chainIn(j,chain(float(bond_arr(j,2)))) .eq. 0)) then
-			chainIn(j,chain(float(bond_arr(j,2)))) = curClus
-			chainIn(j,chain(float(bond_arr(j,3)))) = curClus
+		if ((chainIn(i,chain(float(bond_arr(j,2)))) .eq. 0).and. &
+													(chainIn(i,chain(float(bond_arr(j,3)))) .eq. 0)) then
+			chainIn(i,chain(float(bond_arr(j,2)))) = curClus
+			chainIn(i,chain(float(bond_arr(j,3)))) = curClus
+			chain_ends(i,chainEnds(bond_arr(j,2))) = curClus
+			chain_ends(i,chainEnds(bond_arr(j,3))) = curClus
 			maxClus = maxClus + 1 ! Update max number of clusters
 			cycle ClusLoop
 		end if
 
 		! If first chain is in cluster, assign second chain to existing cluster
-		if ((chainIn(j,chain(float(bond_arr(j,2)))) .ne. 0).and. &
-													(chainIn(j,chain(float(bond_arr(j,3)))) .eq. 0)) then
-			curClus = chainIn(j,chain(float(bond_arr(j,2))))
-			chainIn(j,chain(float(bond_arr(j,3)))) = curClus
-			cycle ClusLoop
+		if ((chainIn(i,chain(float(bond_arr(j,2)))) .ne. 0).and. &
+													(chainIn(i,chain(float(bond_arr(j,3)))) .eq. 0)) then
+			curClus = chainIn(i,chain(float(bond_arr(j,2))))
+			chainIn(i,chain(float(bond_arr(j,3)))) = curClus
+		end if
+
+		if ((chain_ends(i,chainEnds(bond_arr(j,2))) .ne. 0) .and. &
+													(chain_ends(i,chainEnds(bond_arr(j,3))) .eq. 0)) then
+			curClus = chain_ends(i,chainEnds(bond_arr(j,2)))
+			chain_ends(i,chainEnds(bond_arr(j,3))) = curClus
 		end if
 
 		! If second chain is in cluster, assign first chain to existing cluster
-		if ((chainIn(j,chain(float(bond_arr(j,3)))) .ne. 0).and. &
-													(chainIn(j,chain(float(bond_arr(j,2)))) .eq. 0)) then
-			curClus = chainIn(j,chain(float(bond_arr(j,3))))
-			chainIn(j,chain(float(bond_arr(j,2)))) = curClus
-			cycle ClusLoop
+		if ((chainIn(i,chain(float(bond_arr(j,3)))) .ne. 0).and. &
+													(chainIn(i,chain(float(bond_arr(j,2)))) .eq. 0)) then
+			curClus = chainIn(i,chain(float(bond_arr(j,3))))
+			chainIn(i,chain(float(bond_arr(j,2)))) = curClus
 		end if
 
+		if ((chain_ends(i,chainEnds(bond_arr(j,3))) .ne. 0) .and. &
+													(chain_ends(i,chainEnds(bond_arr(j,2))) .eq. 0)) then
+			curClus = chain_ends(i,chainEnds(bond_arr(j,3)))
+			chain_ends(i,chainEnds(bond_arr(j,2))) = curClus
+		end if
+
+
 		! If both chains are in a cluster, assign all chains to first cluster
-		if ((chainIn(j,chain(float(bond_arr(j,2)))) .ne. 0).and. &
-													(chainIn(j,chain(float(bond_arr(j,3)))) .ne. 0)) then
-			where (chainIn(j,:) .eq. chainIn(j,chain(float(bond_arr(j,3))))) &
-													chainIn(j,:) = chainIn(j,chain(float(bond_arr(j,2))))
+		clus_a = chainIn(i,chain(float(bond_arr(j,2))))
+		clus_b = chainIn(i,chain(float(bond_arr(j,3))))
+		if ((clus_a .ne. 0) .and. (clus_b .ne. 0) .and. (clus_a .ne. clus_b)) then
+			where (chainIn(i,:) .eq. clus_b) chainIn(i,:) = clus_a
+			where (chain_ends(i,:) .eq. clus_b) chain_ends(i,:) = clus_a
 		end if
 
 	end do ClusLoop
@@ -254,6 +280,95 @@ time_loop: do i = 1, num_tsteps, 1
 	end if
 
 end do time_loop
+
+end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine linloop(num_chains,tot_time,chain_ends)
+! Determines if clusters are linear or loop on themselves
+! output handled locally
+
+implicit none
+	integer,intent(in)	:: num_chains, tot_time ! describes size of system
+	integer,intent(in)	:: chain_ends(tot_time,2*num_chains) ! holds which
+																								! cluster a chain end belongs to
+	integer							:: i, j, k ! looping integers
+	character*50				:: file_out ! name of output file
+	integer							:: looped, linear ! # looped an linear clusters at a time
+	integer							:: tot_looped, tot_linear ! total # of looped, linear
+	integer							:: tot_clusters ! local and total clusters
+	integer							:: num_clus ! number of clusters at a timestep
+	integer							:: loop_flag ! flag, if both ends of a chain ==, 1; 0 else
+	real								:: tot_ratio, ratio ! ratio of looped to linear
+
+! initializations
+file_out = "loops.dat"
+tot_looped = 0
+tot_linear = 0
+tot_clusters = 0
+tot_ratio = 0
+
+open(unit=17, file=trim(file_out), status='replace', position='append')
+
+! iterate through time
+time_loop: do i = 1, tot_time, 1
+
+	num_clus = maxval(chain_ends(i,:))
+	tot_clusters = tot_clusters + num_clus
+	looped = 0
+	linear = 0
+
+	! iterate through clusters
+	clus_loop: do j = 1, num_clus, 1
+		loop_flag = 0
+		! iterate through the chains
+		chain_loop: do k = 2, 2*num_chains, 2
+			! cycle if not cluster we want
+			if ((chain_ends(i,k) .ne. j) .and. (chain_ends(i,k-1) .ne. j)) then
+				cycle chain_loop
+			end if
+
+			if (chain_ends(i,k) .ne. chain_ends(i,k-1)) then
+				loop_flag = 0
+			else if ((chain_ends(i,k) .eq. j) .and. (chain_ends(i,k-1) .eq. j)) then
+				loop_flag = 1
+			end if
+
+			if ((chain_ends(i,k) .ne. 0).and.(chain_ends(i,k-1) .ne. 0) &
+														.and. (chain_ends(i,k) .ne. chain_ends(i,k-1))) then
+				write(*,*) "Cluster mismatch Error. Chain:", k, "Cluster:", j
+				write(*,*) "Side A:", chain_ends(i,k), "Side B:", chain_ends(i,k-1)
+			end if
+
+		end do chain_loop
+
+		if (loop_flag .eq. 1) then
+			looped = looped + 1
+		else if (loop_flag .eq. 0) then
+			linear = linear + 1
+		end if
+
+	end do clus_loop
+
+	ratio = float(looped)/float(linear)
+	write(17,*) "Timestep:", i
+	write(17,*) "Clusters:", num_clus
+	write(17,*) "Looped Clusters:", looped
+	write(17,*) "Linear Clusters:", linear
+	write(17,*) "Ratio Loop/Linear:", ratio
+	tot_looped = tot_looped + looped
+	tot_linear = tot_linear + linear
+	tot_ratio = tot_ratio + ratio
+
+end do time_loop
+
+write(17,*) "Total Timesteps:", tot_time
+write(17,*) "Total Clusters:", tot_clusters
+write(17,*) "Total Looped Clusters:", tot_looped
+write(17,*) "Total Linear Clusters:", tot_linear
+write(17,*) "Average Ratio Loop/Linear:", tot_ratio/tot_time
+
+close(17)
 
 end subroutine
 
@@ -280,10 +395,11 @@ implicit none
 	integer				:: in_count ! Collapsed number of chains involved
 	real					:: perc_chains ! Percentage of chains
 	integer				:: num_not_assoc ! number of chains not in a cluster
+	integer				:: out_count
 
 ! Open files
-open(unit=11,file="Clusters.dat",status="unknown",position="append")
-open(unit=12,file="ClusSizes.dat",status="unknown",position="append")
+open(unit=11,file="Clusters.dat",status="replace",position="append")
+open(unit=12,file="ClusSizes.dat",status="replace",position="append")
 
 !  write headers
 write(11,*) "TimeStep	NumCLusters Percentage"
@@ -301,6 +417,7 @@ time_loop: do k = 1, num_tsteps, 1
 	chain_no_clus = (chainIn(k,:) .eq. 0)
 	num_not_assoc = count(chain_no_clus)
 	clusArr(k,1) = num_not_assoc
+	out_count = 1
 
 	! find maximum cluster
 	maxClus = maxval(chainIn(k,:))
@@ -320,24 +437,22 @@ time_loop: do k = 1, num_tsteps, 1
 
 		end do ClusFndLoop
 
-		! If no chains, skip output
-		if (clus_count .gt. 1) then
-			! Write output
-			write(12,*) i, clus_count
+		! Write output
+		if (clus_count .ne. 0) then
+			write(12,*) out_count, clus_count
+			out_count = out_count + 1
 			! If more than lrg_clus chains in cluster, assign to max box, inform user
-			if (clus_count .ge. lrg_clus) then
+			if (clus_count .gt. lrg_clus) then
 				clusArr(k,lrg_clus) = clusArr(k,lrg_clus) + 1
 			! All else write to appropriate box
 			else if ((clus_count .ge. 2).and.(clus_count .le. lrg_clus)) then
 				clusArr(k,clus_count) = clusArr(k,clus_count) + 1
-			else
-				write(*,*) "Cluster with chains outside of parameters found."
 			end if
 		end if
 
 		! Write timestep and total number of clusters to file
 		if (i .eq. maxClus) then
-			write(11,*) k, i, perc_chains
+			write(11,*) k, out_count, perc_chains
 		end if
 
 	end do ReadLoop
