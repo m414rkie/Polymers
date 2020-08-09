@@ -64,6 +64,8 @@ end do file_names
 ! initialize macro parameters
 tot_time_steps = 0
 tot_bonds = 0
+! file stores number of bonds per timestep, for troubleshooting
+open(unit=16, file='bonds_tstep.dat', status='replace', position='append')
 ! get total timesteps, total number of bonds
 file_iter: do i = 1, num_files, 1
 
@@ -78,6 +80,7 @@ file_iter: do i = 1, num_files, 1
 		read(15,*) tstep
 		read(15,*)
 		read(15,*) numBonds
+		write(16,*) tstep, numBonds
 		read(15,*); read(15,*); read(15,*); read(15,*);	read(15,*)
 
 		tot_time_steps = tot_time_steps + 1
@@ -92,6 +95,7 @@ file_iter: do i = 1, num_files, 1
 	101	close(15)
 
 end do file_iter
+close(16)
 
 write(*,*) "Total Timesteps:", tot_time_steps
 write(*,*) "Total Bonds Found:", tot_bonds
@@ -167,7 +171,7 @@ write(*,*) "Building Clusters"
 call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
 																													chainTrack,chain_ends)
 write(*,*) "Preparing Outputs"
-call linloop(numChains,tot_time_steps,chain_ends)
+call linloop(numChains,tot_time_steps,chainTrack,chain_ends)
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
 call statistics(tot_time_steps,lrg_track,statsArr)
 
@@ -181,7 +185,6 @@ subroutine ClusBuilder(num_bonds,dim2a1,num_tsteps,chain_amt,bond_arr, &
 ! Builds the clusters at each timestep.
 ! output array is chainIn.
 
-use functions
 use chain_Functions
 
 implicit none
@@ -262,7 +265,6 @@ time_loop: do i = 1, num_tsteps, 1
 			chain_ends(i,chainEnds(bond_arr(j,2))) = curClus
 		end if
 
-
 		! If both chains are in a cluster, assign all chains to first cluster
 		clus_a = chainIn(i,chain(float(bond_arr(j,2))))
 		clus_b = chainIn(i,chain(float(bond_arr(j,3))))
@@ -284,7 +286,7 @@ end do time_loop
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine linloop(num_chains,tot_time,chain_ends)
+subroutine linloop(num_chains,tot_time,chains,chain_ends)
 ! Determines if clusters are linear or loop on themselves
 ! output handled locally
 
@@ -292,14 +294,18 @@ implicit none
 	integer,intent(in)	:: num_chains, tot_time ! describes size of system
 	integer,intent(in)	:: chain_ends(tot_time,2*num_chains) ! holds which
 																								! cluster a chain end belongs to
+	integer,intent(in)	:: chains(tot_time,num_chains) ! holds which chains
+																											! belong to which cluster
 	integer							:: i, j, k ! looping integers
 	character*50				:: file_out ! name of output file
 	integer							:: looped, linear ! # looped an linear clusters at a time
 	integer							:: tot_looped, tot_linear ! total # of looped, linear
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
-	integer							:: loop_flag ! flag, if both ends of a chain ==, 1; 0 else
+	integer							:: loop_flag ! flag, if both ends in cluster += 1
+	integer							:: unlooped_flag ! flag, if both ends not in cluster +=1
 	real								:: tot_ratio, ratio ! ratio of looped to linear
+	integer							:: chains_in ! number of chains in the cluster
 
 ! initializations
 file_out = "loops.dat"
@@ -313,46 +319,49 @@ open(unit=17, file=trim(file_out), status='replace', position='append')
 ! iterate through time
 time_loop: do i = 1, tot_time, 1
 
-	num_clus = maxval(chain_ends(i,:))
-	tot_clusters = tot_clusters + num_clus
+	num_clus = maxval(chains(i,:))
 	looped = 0
 	linear = 0
 
 	! iterate through clusters
 	clus_loop: do j = 1, num_clus, 1
 		loop_flag = 0
+		unlooped_flag = 0
+		chains_in = 0
 		! iterate through the chains
-		chain_loop: do k = 2, 2*num_chains, 2
-			! cycle if not cluster we want
-			if ((chain_ends(i,k) .ne. j) .and. (chain_ends(i,k-1) .ne. j)) then
+		chain_loop: do k = 1, num_chains, 1
+			! cycle if not cluster we want, else add a chain to the cluster
+			if (chains(i,k) .ne. j) then
 				cycle chain_loop
+			else
+				chains_in = chains_in + 1
+			end if
+			! Not same values
+			if (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1)) then
+				unlooped_flag = unlooped_flag + 1 ! not looped
+			else
+				loop_flag = loop_flag + 1 ! looped
 			end if
 
-			if (chain_ends(i,k) .ne. chain_ends(i,k-1)) then
-				loop_flag = 0
-			else if ((chain_ends(i,k) .eq. j) .and. (chain_ends(i,k-1) .eq. j)) then
-				loop_flag = 1
-			end if
-
-			if ((chain_ends(i,k) .ne. 0).and.(chain_ends(i,k-1) .ne. 0) &
-														.and. (chain_ends(i,k) .ne. chain_ends(i,k-1))) then
+			if (((chain_ends(i,2*k) .ne. 0).and.(chain_ends(i,2*k - 1) .ne. 0)) &
+											.and. (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1))) then
 				write(*,*) "Cluster mismatch Error. Chain:", k, "Cluster:", j
 				write(*,*) "Side A:", chain_ends(i,k), "Side B:", chain_ends(i,k-1)
 			end if
 
 		end do chain_loop
 
-		if (loop_flag .eq. 1) then
-			looped = looped + 1
-		else if (loop_flag .eq. 0) then
+		if (unlooped_flag .gt. 0) then
 			linear = linear + 1
+		else
+			looped = looped + 1
 		end if
 
 	end do clus_loop
 
 	ratio = float(looped)/float(linear)
 	write(17,*) "Timestep:", i
-	write(17,*) "Clusters:", num_clus
+	write(17,*) "Clusters:", looped+linear
 	write(17,*) "Looped Clusters:", looped
 	write(17,*) "Linear Clusters:", linear
 	write(17,*) "Ratio Loop/Linear:", ratio
@@ -362,6 +371,7 @@ time_loop: do i = 1, tot_time, 1
 
 end do time_loop
 
+tot_clusters = tot_looped + tot_linear
 write(17,*) "Total Timesteps:", tot_time
 write(17,*) "Total Clusters:", tot_clusters
 write(17,*) "Total Looped Clusters:", tot_looped

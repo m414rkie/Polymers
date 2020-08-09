@@ -78,14 +78,18 @@ subroutine modulis(ins,outs,dim1,dim2)
 		complex							:: ex_arg ! complex weighted angle
 
 		integer							:: i, j
-		complex							:: loc_sum, vv ! Placeholder values
+		complex							:: loc_sum ! Placeholder values
 		complex							:: g_interim(dim1) ! holds values
-		complex							:: freq_mod ! Holds complex moduli at a frequency
+		real								:: re, im ! testing variables
 
 outs = 0.0
-dt = ins(2,1) - ins(1,1)	! sampling rate
-df = (2.0/dt)/float(dim1) ! Auto-scale frequencies determined by sample rate
+!dt = ins(2,1) - ins(1,1)	! sampling rate
+!df = (2.0/dt)/float(dim1) ! Auto-scale frequencies determined by sample rate
 													! 	and number of entries
+
+dt = (10.0E5-10.0E-4)/float(dim1)
+df = (2.0/dt)/float(dim1)
+
 write(*,*) "Max Frequency: ", 1.0/(2.0*dt)
 ! Loop over frequencies
 freq_loop: do i = 1, dim1-1, 1
@@ -102,8 +106,17 @@ freq_loop: do i = 1, dim1-1, 1
 		loc_sum = loc_sum + cmplx(ins(j,2))*cexp(ex_arg)
 	end do sum_loop
 
+	! return results phase-shifted to QI
+	re = real(loc_sum)
+	im = aimag(loc_sum)
+	if (re .lt. 0.0) then
+		loc_sum = cmplx(abs(re),im)
+	end if
+	if (im .lt. 0.0) then
+		loc_sum = cmplx(re,abs(im))
+	end if
 
-	g_interim(i) = cmplx(1.0,0.0)/(loc_sum*2.0*pi*freq_i*cmplx(0.0,pi))
+	g_interim(i) = cmplx(1.0,0.0)/(loc_sum*freq_i*cmplx(0.0,pi))
 	! scale freq and save to out array
 	outs(i,1) = freq_i*df
 
@@ -111,8 +124,8 @@ end do freq_loop
 
 ! Assign individual values
 sep_loop: do i = 1, dim1-1, 1
-	outs(i,2) = real(g_interim(i))
-	outs(i,3) = aimag(g_interim(i))
+	outs(i,2) = abs(real(g_interim(i)))
+	outs(i,3) = abs(aimag(g_interim(i)))
 end do sep_loop
 
 end subroutine
@@ -132,5 +145,7 @@ do i = 1, dim1-1, 1
 end do
 
 close(15)
+
+write(*,*) "Outputs found in 'modulis.dat'"
 
 end subroutine
