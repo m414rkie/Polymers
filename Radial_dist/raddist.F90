@@ -24,7 +24,6 @@ implicit none
 	real,allocatable	:: dist_arr(:) ! Holds the values for the radial distance functio.
 	real						 	:: vol, xd, yd, zd ! Values for the box. Volume and largest axial distance
 	character*1				:: type ! For user input, selects which bead type is being examined
-	integer						:: bead_type ! Holds bead type after conversion from user input.
 
 ! User input.
 write(*,*) "Please choose which bond type to examine."
@@ -33,12 +32,6 @@ read(*,*) type
 
 ! Parse
 call chartoup(type,type)
-
-if (type .eq. 'H') then
-	bead_type = 2
-else
-	bead_type = 3
-end if
 
 100 write(*,*) "Please enter the name of the file with the data."
 write(*,*) "If the file is not in this directory enter the full path."
@@ -115,7 +108,7 @@ do
 	end do fileread
 
 	! Call distribution subroutine
- 	call rad_dist(moldata,numMols,7,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,bead_type)
+ 	call rad_dist(moldata,numMols,7,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,type)
 	deallocate(molData)
 
 	! Checks for EOF, if not then reads and discards header data for next step
@@ -135,12 +128,12 @@ end do
 write(*,*) "End of input file reached. Goodbye"
 
 ! Final output
-call dist_print(dist_arr,r_num,r_max,numTsteps,bead_type)
+call dist_print(dist_arr,r_num,r_max,numTsteps,type)
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,r_max,vol,xbx,ybx,zbx,t,btype)
+subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,r_max,vol,xbx,ybx,zbx,t,type)
 ! Subroutine to determine the radial distribution function at each step.
 
 use functions
@@ -148,7 +141,8 @@ use chain_Functions
 
 implicit none
 	integer,intent(in)		:: dim1, dim2  ! Dimensions of input array
-	integer,intent(in)		:: r_num, btype ! Number of divisions for array, bead type
+	integer,intent(in)		:: r_num ! number of possible bins
+	character*1,intent(in):: type !  bead type
 	real,intent(in)				:: xbx, ybx, zbx ! Maximum axial distance beads can be from each other
 	real,intent(in)				:: vol, t, r_max ! total volume of box, time step, largest dist
 	real,intent(in)				:: arrin(dim1,dim2) ! Input array, holds bead location and type
@@ -163,11 +157,16 @@ implicit none
 	real									:: shell ! Will hold volume of shell
 	real,parameter				:: pi = acos(-1.0) ! Pi
 	character*15					:: filename ! Holds filename. Changes based on which bead we are examining
+	integer								:: b_type, b_type2 ! numbers associated with the bead type
 
-if (btype .eq. 2) then
-	filename = "timrad_h.dat"
+if (type .eq. 'H') then
+	b_type = 5
+	b_type2 = 0
+	filename = 'timrad_h.dat'
 else
-	filename = "timrad_s.dat"
+	filename = 'timrad_s.dat'
+	b_type = 3
+	b_type2 = 1
 end if
 
 ! Initialize temporary array
@@ -184,7 +183,7 @@ sh_count = 0
 outer_loop : do i = 1, dim1, 1
 
 		! skip if not right bead type
-		if (nint(arrin(i,2)) .ne. btype) then
+		if ((nint(arrin(i,2)) .ne. b_type).or.(nint(arrin(i,2)) .ne. b_type2)) then
 				cycle outer_loop
 		end if
 
@@ -200,7 +199,7 @@ outer_loop : do i = 1, dim1, 1
 			inner_loop : do j = 1, dim1, 1
 
 					! skip if not right bead type
-					if (nint(arrin(j,2)) .ne. btype) then
+					if ((nint(arrin(j,2)) .ne. b_type).or.(nint(arrin(j,2)) .ne. b_type2)) then
 							cycle inner_loop
 					end if
 
@@ -310,13 +309,13 @@ implicit none
 	integer				:: r_num, t ! Size of array, number of timesteps
 	real					:: arrin(r_num) ! Array to be time-averaged
 	real					:: max_len ! Largest possible distance
-	integer				:: btype ! Holds bead of interest, for use in filename
+	character*1		:: btype ! Holds bead of interest, for use in filename
 
 	real					:: r, dr ! Current distance, distance stepsize
 	integer				:: i ! Looping integer
 	character*20	:: filename
 
-	if (btype .eq. 2) then
+	if (btype .eq. 'H') then
 		filename = "rad_dist_h.dat"
 	else
 		filename = "rad_dist_s.dat"

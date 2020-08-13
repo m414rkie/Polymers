@@ -7,6 +7,8 @@
 
 program clusfinder
 
+use chain_Functions
+
 implicit none
 	character*50, allocatable	:: file_arr(:)  ! Holds names of input files
 	character*50							:: raw_in ! Name of input file
@@ -155,12 +157,21 @@ file_input: do i = 1, num_files, 1
 		bond_time(time_int) = numBonds
 		read(15,*); read(15,*); read(15,*); read(15,*);	read(15,*)
 
+		if (time_int .eq. 1) then
+			open(unit=23,file='pairs.dat', status='replace',position='append')
+		end if
+
 		in_loop: do j = 1, numBonds, 1
 			bead_pairs(j+bonds_read,1) = time_int
 			read(15,*)  bead_pairs(j+bonds_read,2), bead_pairs(j+bonds_read,3), junk
+			if (time_int .eq. 1) then
+				write(23,*) bead_pairs(j+bonds_read,2), bead_pairs(j+bonds_read,3)
+			end if
 		end do in_loop
 		bonds_read = bonds_read + numBonds
-
+		if (time_int .eq. 1) then
+			close(23)
+		end if
 	end do data_input
 
 	102	close(15)
@@ -201,9 +212,12 @@ implicit none
 	integer		:: i, j ! Looping integers
 	integer		:: bonds_counted
 	integer		:: clus_a, clus_b
+	integer		:: chain_a, chain_b
 
 ! Initialize
 bonds_counted = 0
+chainIn = 0
+chain_ends = 0
 
 time_loop: do i = 1, num_tsteps, 1
 
@@ -228,49 +242,41 @@ time_loop: do i = 1, num_tsteps, 1
 		! Set working cluster to largest cluster
 		curClus = maxClus
 
+		! get the chains involved
+		chain_a = chain(float(bond_arr(j,2)))
+		chain_b = chain(float(bond_arr(j,3)))
+		! set the endgroups to involved
+		chain_ends(i,chainEnds(bond_arr(j,2))) = 1
+		chain_ends(i,chainEnds(bond_arr(j,3))) = 1
+
 		! If both chains are not involved in a cluster, put them in new cluster
-		if ((chainIn(i,chain(float(bond_arr(j,2)))) .eq. 0).and. &
-													(chainIn(i,chain(float(bond_arr(j,3)))) .eq. 0)) then
-			chainIn(i,chain(float(bond_arr(j,2)))) = curClus
-			chainIn(i,chain(float(bond_arr(j,3)))) = curClus
-			chain_ends(i,chainEnds(bond_arr(j,2))) = curClus
-			chain_ends(i,chainEnds(bond_arr(j,3))) = curClus
-			maxClus = maxClus + 1 ! Update max number of clusters
+		if ((chainIn(i,chain_a) .eq. 0) .and. (chainIn(i,chain_b) .eq. 0)) then
+			chainIn(i,chain_a) = curClus
+			chainIn(i,chain_b) = curClus
+			maxClus = maxClus + 1
 			cycle ClusLoop
 		end if
 
 		! If first chain is in cluster, assign second chain to existing cluster
-		if ((chainIn(i,chain(float(bond_arr(j,2)))) .ne. 0).and. &
-													(chainIn(i,chain(float(bond_arr(j,3)))) .eq. 0)) then
-			curClus = chainIn(i,chain(float(bond_arr(j,2))))
-			chainIn(i,chain(float(bond_arr(j,3)))) = curClus
-		end if
-
-		if ((chain_ends(i,chainEnds(bond_arr(j,2))) .ne. 0) .and. &
-													(chain_ends(i,chainEnds(bond_arr(j,3))) .eq. 0)) then
-			curClus = chain_ends(i,chainEnds(bond_arr(j,2)))
-			chain_ends(i,chainEnds(bond_arr(j,3))) = curClus
+		if ((chainIn(i,chain_a) .ne. 0) .and. (chainIn(i,chain_b) .eq. 0)) then
+			curClus = chainIn(i,chain_a)
+			chainIn(i,chain_b) = curClus
+			cycle ClusLoop
 		end if
 
 		! If second chain is in cluster, assign first chain to existing cluster
-		if ((chainIn(i,chain(float(bond_arr(j,3)))) .ne. 0).and. &
-													(chainIn(i,chain(float(bond_arr(j,2)))) .eq. 0)) then
-			curClus = chainIn(i,chain(float(bond_arr(j,3))))
-			chainIn(i,chain(float(bond_arr(j,2)))) = curClus
-		end if
-
-		if ((chain_ends(i,chainEnds(bond_arr(j,3))) .ne. 0) .and. &
-													(chain_ends(i,chainEnds(bond_arr(j,2))) .eq. 0)) then
-			curClus = chain_ends(i,chainEnds(bond_arr(j,3)))
-			chain_ends(i,chainEnds(bond_arr(j,2))) = curClus
+		if ((chainIn(i,chain_b) .ne. 0) .and. (chainIn(i,chain_a) .eq. 0)) then
+			curClus = chainIn(i,chain_b)
+			chainIn(i,chain_a) = curClus
+			cycle ClusLoop
 		end if
 
 		! If both chains are in a cluster, assign all chains to first cluster
-		clus_a = chainIn(i,chain(float(bond_arr(j,2))))
-		clus_b = chainIn(i,chain(float(bond_arr(j,3))))
-		if ((clus_a .ne. 0) .and. (clus_b .ne. 0) .and. (clus_a .ne. clus_b)) then
+		if ((chainIn(i,chain_a) .ne. 0) .and. (chainIn(i,chain_b) .ne. 0) .and. &
+					(chainIn(i,chain_a) .ne. chainIn(i,chain_b))) then
+			clus_a = chainIn(i,chain_a)
+			clus_b = chainIn(i,chain_b)
 			where (chainIn(i,:) .eq. clus_b) chainIn(i,:) = clus_a
-			where (chain_ends(i,:) .eq. clus_b) chain_ends(i,:) = clus_a
 		end if
 
 	end do ClusLoop
@@ -330,23 +336,23 @@ time_loop: do i = 1, tot_time, 1
 		chains_in = 0
 		! iterate through the chains
 		chain_loop: do k = 1, num_chains, 1
+
 			! cycle if not cluster we want, else add a chain to the cluster
 			if (chains(i,k) .ne. j) then
 				cycle chain_loop
 			else
 				chains_in = chains_in + 1
 			end if
-			! Not same values
+
+			! statement to ensure nothing fishy happened
+			if ((chain_ends(i,2*k) .eq. 0) .and. (chain_ends(i,2*k - 1) .eq. 0)) then
+				write(*,*) "Neither endgroup in a cluster, but the chain is."
+			end if
+			! If both endgroups are in a bond, should be equal
 			if (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1)) then
 				unlooped_flag = unlooped_flag + 1 ! not looped
 			else
 				loop_flag = loop_flag + 1 ! looped
-			end if
-
-			if (((chain_ends(i,2*k) .ne. 0).and.(chain_ends(i,2*k - 1) .ne. 0)) &
-											.and. (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1))) then
-				write(*,*) "Cluster mismatch Error. Chain:", k, "Cluster:", j
-				write(*,*) "Side A:", chain_ends(i,k), "Side B:", chain_ends(i,k-1)
 			end if
 
 		end do chain_loop
