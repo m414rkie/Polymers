@@ -66,7 +66,7 @@ yd = boxDim(2,2) - boxDim(2,1)
 zd = boxDim(3,2) - boxDim(3,1)
 vol = xd*yd*zd
 
-r_max = sqrt((0.75*xd)**2 + (0.75*yd)**2 + (0.75*zd)**2)
+r_max = sqrt((xd**2) + (yd**2) + (zd**2))
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
 r_num = ceiling(r_max)
@@ -183,7 +183,7 @@ sh_count = 0
 outer_loop : do i = 1, dim1, 1
 
 		! skip if not right bead type
-		if ((nint(arrin(i,2)) .ne. b_type).or.(nint(arrin(i,2)) .ne. b_type2)) then
+		if ((nint(arrin(i,2)) .ne. b_type).and.(nint(arrin(i,2)) .ne. b_type2)) then
 				cycle outer_loop
 		end if
 
