@@ -70,7 +70,6 @@ r_max = sqrt((xd**2) + (yd**2) + (zd**2))
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
 r_num = ceiling(r_max)
-write(*,*) "Array size ", r_num
 
 ! Allocation
 allocate(dist_arr(r_num), stat= ioErr)
@@ -88,7 +87,7 @@ do
 	numTsteps = numTsteps + 1
 
 	! Allocate data array
-	allocate(molData(numMols,7), stat = ioErr)
+	allocate(molData(numMols,5), stat = ioErr)
 
 	if (ioErr .ne. 0) then
 		write(*,*) "Failed to allocated primary array. Exiting at timestep", tstep
@@ -104,11 +103,11 @@ do
 	fileread: do j = 1, numMols, 1
 
 		read(15,*) molData(j,1), molData(j,2), molData(j,3), molData(j,4), molData(j,5)
-
+							! bead #     , type        , x           , y           , z
 	end do fileread
 
 	! Call distribution subroutine
- 	call rad_dist(moldata,numMols,7,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,type)
+ 	call rad_dist(moldata,numMols,5,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,type)
 	deallocate(molData)
 
 	! Checks for EOF, if not then reads and discards header data for next step
@@ -163,7 +162,7 @@ if (type .eq. 'H') then
 	b_type = 5
 	b_type2 = 0
 	filename = 'timrad_h.dat'
-else
+else if (type .eq. 'S') then
 	filename = 'timrad_s.dat'
 	b_type = 3
 	b_type2 = 1
@@ -183,8 +182,10 @@ sh_count = 0
 outer_loop : do i = 1, dim1, 1
 
 		! skip if not right bead type
-		if ((nint(arrin(i,2)) .ne. b_type).and.(nint(arrin(i,2)) .ne. b_type2)) then
+		if (arrin(i,2) .ne. b_type) then
+			if (arrin(i,2) .ne. b_type2) then
 				cycle outer_loop
+			end if
 		end if
 
 		! Add bead to total number of beads
@@ -199,7 +200,7 @@ outer_loop : do i = 1, dim1, 1
 			inner_loop : do j = 1, dim1, 1
 
 					! skip if not right bead type
-					if ((nint(arrin(j,2)) .ne. b_type).or.(nint(arrin(j,2)) .ne. b_type2)) then
+					if ((nint(arrin(j,2)) .ne. b_type).and.(nint(arrin(j,2)) .ne. b_type2)) then
 							cycle inner_loop
 					end if
 
