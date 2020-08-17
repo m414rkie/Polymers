@@ -239,11 +239,6 @@ time_loop: do i = 1, num_tsteps, 1
 			cycle ClusLoop
 		end if
 
-		! skip if on same end of a chain
-		if (chainEnds(bond_arr(j,2)) .eq. chainEnds(bond_arr(j,3))) then
-			cycle ClusLoop
-		end if
-
 		! Set working cluster to largest cluster
 		curClus = maxClus
 
@@ -471,7 +466,7 @@ time_loop: do k = 1, num_tsteps, 1
 			if (clus_count .gt. lrg_clus) then
 				clusArr(k,lrg_clus) = clusArr(k,lrg_clus) + 1
 			! All else write to appropriate box
-			else if ((clus_count .ge. 2).and.(clus_count .le. lrg_clus)) then
+			else if ((clus_count .ge. 1).and.(clus_count .le. lrg_clus)) then
 				clusArr(k,clus_count) = clusArr(k,clus_count) + 1
 			end if
 		end if
