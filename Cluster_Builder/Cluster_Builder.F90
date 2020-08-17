@@ -19,6 +19,7 @@ implicit none
 	integer						:: tot_bonds, time_int ! total number of bonds, time tracker
 	real							:: tstep, junk ! Distance parameter, number of clusters
 																		! found, curent timestep
+	real							:: percent
 	integer						:: numBonds, numChains ! Number of molecules in system
 	 																					! Number of chains per molecule
 	integer						:: bonds_read ! keeps track of number of bonds read
@@ -33,6 +34,7 @@ implicit none
 ! Number of chains in the system, largest cluster to look for
 numChains = 2000
 lrg_track = 100
+percent = 0.0
 
 ! get number of files to read
 write(*,*) "Please enter the number of files with data"
@@ -180,11 +182,11 @@ end do file_input
 
 write(*,*) "Building Clusters"
 call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
-																													chainTrack,chain_ends)
+																									chainTrack,chain_ends,percent)
 write(*,*) "Preparing Outputs"
 call linloop(numChains,tot_time_steps,chainTrack,chain_ends)
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
-call statistics(tot_time_steps,lrg_track,statsArr)
+call statistics(tot_time_steps,lrg_track,statsArr,percent)
 
 write(*,*) "Number of timesteps checked:", tot_time_steps
 
@@ -192,7 +194,7 @@ end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine ClusBuilder(num_bonds,dim2a1,num_tsteps,chain_amt,bond_arr, &
-																									bond_time,chainIn,chain_ends)
+																					bond_time,chainIn,chain_ends,percent)
 ! Builds the clusters at each timestep.
 ! output array is chainIn.
 
@@ -207,10 +209,12 @@ implicit none
 																									! at each timestep
 	integer,intent(inout)	:: chainIn(num_tsteps,chain_amt)
 	integer,intent(inout) :: chain_ends(num_tsteps,2*chain_amt)
+	real,intent(inout)		:: percent
+	logical		:: chain_counter(chain_amt)
 	integer		:: curClus, maxClus ! Current working cluster, number of
 																			! clusters found in total
 	integer		:: i, j ! Looping integers
-	integer		:: bonds_counted
+	integer		:: bonds_counted, chn_count
 	integer		:: clus_a, clus_b
 	integer		:: chain_a, chain_b
 
@@ -218,6 +222,7 @@ implicit none
 bonds_counted = 0
 chainIn = 0
 chain_ends = 0
+percent = 0.0
 
 time_loop: do i = 1, num_tsteps, 1
 
@@ -287,7 +292,13 @@ time_loop: do i = 1, num_tsteps, 1
 		bonds_counted = bonds_counted + bond_time(i)
 	end if
 
+	chain_counter = (chainIn(i,:) .ne. 0)
+	chn_count = count(chain_counter)
+	percent = percent + float(chn_count)/float(chain_amt)
+
 end do time_loop
+
+percent = percent/float(num_tsteps)
 
 end subroutine
 
@@ -434,7 +445,6 @@ time_loop: do k = 1, num_tsteps, 1
 	num_not_assoc = count(chain_no_clus)
 	clusArr(k,1) = num_not_assoc
 	out_count = 1
-
 	! find maximum cluster
 	maxClus = maxval(chainIn(k,:))
 	! Iterate through the clusters
@@ -482,21 +492,21 @@ close(12)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine statistics(num_tsteps,lrg_track,statsArr)
+subroutine statistics(num_tsteps,lrg_track,statsArr,percent)
 ! Find some statistics about clusters
 
 implicit none
 	integer,intent(in)	:: num_tsteps, lrg_track ! dimensions of working array
 	integer,intent(in)	:: statsArr(num_tsteps,lrg_track) ! Holds cluster
 	 																							! distributions at each timestep
-
+	real,intent(in)		:: percent
 	integer		:: i, j ! Looping integers
 	integer		:: n ! Will hold total number of clusters
 	real 		  :: num, num_sq ! total chains and total chains squared
 	real		  :: mean, std_dev, variance
-	real			:: unbound_avg ! average unbound chains
 	real		  :: numavg(lrg_track) ! For printing
 	real			:: perc_tot ! Overall percentage of chains in a cluster
+	real			:: summed
 
 num = 0
 num_sq = 0
@@ -504,9 +514,8 @@ mean = 0
 std_dev = 0
 variance = 0
 numavg = 0
-unbound_avg = 0
 perc_tot = 0.0
-
+summed = 0.0
 ! Value updates
 time_loop: do j = 1, num_tsteps, 1
 
@@ -516,7 +525,6 @@ time_loop: do j = 1, num_tsteps, 1
 
 	! Global stuff
 	! x
-	unbound_avg = unbound_avg + statsArr(j,1)
 	numavg(1) = numavg(1) + statsArr(j,1)
 	perc_tot = float(statsArr(j,1))/2000.0
 	do i = 2, lrg_track, 1
@@ -547,14 +555,13 @@ std_dev = sqrt(variance)
 write(13,*) "Total Time Steps: ", num_tsteps
 write(13,*) "Average Size: ",(mean/float(num_tsteps))
 write(13,*) "Std devation: ", (std_dev/float(num_tsteps))
-write(13,*) "Avg. Percentage of Unbound Chains: ", &
-																					(unbound_avg/float(num_tsteps))/2000.0
-write(13,*) "Avg. Unbonded Chains: ", (unbound_avg/float(num_tsteps))
+write(13,*) "Avg. Percentage of Unbound Chains: ", (1.0-percent)
 ! Output for box plot
 write(13,*) "Box Plot"
 do i = 1, lrg_track, 1
 	write(13,*) i, numavg(i)/float(num_tsteps)
+	summed = summed + float(i)*numavg(i)/float(num_tsteps)
 end do
 close(13)
-
+write(*,*) "Averages sum:",summed
 end subroutine
