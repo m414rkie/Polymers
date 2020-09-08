@@ -319,6 +319,8 @@ implicit none
 	integer							:: unlooped_flag ! flag, if both ends not in cluster +=1
 	real								:: tot_ratio, ratio ! ratio of looped to linear
 	integer							:: chains_in ! number of chains in the cluster
+	integer							:: loop_multiple, lin_multiple ! clusters with more than 1 chain
+	integer							:: chn_cnt ! counts chains in a cluster
 
 ! initializations
 file_out = "loops.dat"
@@ -328,6 +330,8 @@ tot_clusters = 0
 tot_ratio = 0
 
 open(unit=17, file=trim(file_out), status='replace', position='append')
+loop_multiple = 0
+lin_multiple = 0
 
 ! iterate through time
 time_loop: do i = 1, tot_time, 1
@@ -341,6 +345,7 @@ time_loop: do i = 1, tot_time, 1
 		loop_flag = 0
 		unlooped_flag = 0
 		chains_in = 0
+		chn_cnt = 0
 		! iterate through the chains
 		chain_loop: do k = 1, num_chains, 1
 
@@ -349,6 +354,7 @@ time_loop: do i = 1, tot_time, 1
 				cycle chain_loop
 			else
 				chains_in = chains_in + 1
+				chn_cnt = chn_cnt + 1
 			end if
 
 			! statement to ensure nothing fishy happened
@@ -366,8 +372,14 @@ time_loop: do i = 1, tot_time, 1
 
 		if (unlooped_flag .gt. 0) then
 			linear = linear + 1
+			if (chn_cnt .gt. 1) then
+				lin_multiple = lin_multiple + 1
+			end if
 		else
 			looped = looped + 1
+			if (chn_cnt .gt. 1) then
+				loop_multiple = loop_multiple + 1
+			end if
 		end if
 
 	end do clus_loop
@@ -389,7 +401,10 @@ write(17,*) "Total Timesteps:", tot_time
 write(17,*) "Total Clusters:", tot_clusters
 write(17,*) "Total Looped Clusters:", tot_looped
 write(17,*) "Total Linear Clusters:", tot_linear
-write(17,*) "Average Ratio Loop/Linear:", tot_ratio/tot_time
+write(17,*) "Average Ratio Loop/Linear:", tot_ratio/float(tot_looped+tot_linear)
+write(17,*) "Average Looped With Multiple Chains:", float(loop_multiple)/float(tot_time)
+write(17,*) "Total Looped With Multiple Chains:", loop_multiple
+write(17,*) "Ratio of Multiple Chain Loops to total:", float(loop_multiple)/float(loop_multiple+lin_multiple)
 
 close(17)
 
@@ -463,7 +478,7 @@ time_loop: do k = 1, num_tsteps, 1
 		if (clus_count .ne. 0) then
 			write(12,*) out_count, clus_count
 			out_count = out_count + 1
-			! If more than lrg_clus chains in cluster, assign to max box, inform user
+			! If more than lrg_clus chains in cluster, assign to max box
 			if (clus_count .gt. lrg_clus) then
 				clusArr(k,lrg_clus) = clusArr(k,lrg_clus) + 1
 			! All else write to appropriate box
@@ -498,51 +513,55 @@ implicit none
 	 																							! distributions at each timestep
 	real,intent(in)		:: percent
 	integer		:: i, j ! Looping integers
-	integer		:: n ! Will hold total number of clusters
-	real 		  :: num, num_sq ! total chains and total chains squared
-	real		  :: mean, std_dev, variance
+	integer		:: n, n_avg ! Will hold total number of clusters
+	integer		:: n_local
+	real 		  :: num ! total clusters
+	real		  :: mean, std_dev, variance, mean_l
+	real			:: avg_mult
 	real			:: l_variance
 	real		  :: numavg(lrg_track) ! For printing
 	real			:: summed
 
 num = 0
-num_sq = 0
 mean = 0
 std_dev = 0
 variance = 0
 numavg = 0
 summed = 0.0
+avg_mult = 0.0
+n_avg = 0
 ! Value updates
 time_loop: do j = 1, num_tsteps, 1
 
 	n = 0
+	n_local = 0
 	num = 0.0
-	num_sq = 0.0
 	l_variance = 0.0
 
 	! Global stuff
 	! x
 	numavg(1) = numavg(1) + statsArr(j,1)
+	n_local = n_local + statsArr(j,1)
 	do i = 2, lrg_track, 1
 		num = num + float((i)*statsArr(j,i))
 		numavg(i) = numavg(i) + statsArr(j,i)
 		n = n + statsArr(j,i)
-	end do
-
-	! x^2
-	do i = 2, lrg_track, 1
-		num_sq = num_sq + (float((i)*statsArr(j,i))**2)
+		n_local = n_local + statsArr(j,i)
 	end do
 
 	! mean
 	mean = mean + num/float(n)
+	avg_mult = avg_mult + (num+statsArr(j,1))/float(n_local)
+	mean_l = num/float(n)
 
 	! variance
 	do i = 1, lrg_track, 1
-		l_variance = l_variance + float(i)*(statsArr(j,i) - mean)
+		l_variance = l_variance + ((float(i)*(statsArr(j,i) - mean_l))**2)/float(n)
 	end do
 
-	variance = variance + l_variance/sum(statsArr(j,:))
+	n_avg = n_avg + n_local
+
+	variance = variance + l_variance
 
 end do time_loop
 
@@ -554,7 +573,9 @@ std_dev = sqrt(variance/num_tsteps)
 
 write(13,*) "Total Time Steps: ", num_tsteps
 write(13,*) "Average Size: ", (mean/float(num_tsteps))
-write(13,*) "Std devation: ", std_dev
+write(13,*) "Average Size with Singles: ", (avg_mult/float(num_tsteps))
+write(13,*) "Std devation Over Time: ", std_dev
+write(13,*) "Avg. Number of Clusters: ", float(n_avg)/float(num_tsteps)
 write(13,*) "Avg. Percentage of Unbound Chains: ", (1.0-percent)
 ! Output for box plot
 write(13,*) "Box Plot"
