@@ -33,7 +33,7 @@ implicit none
 
 ! Number of chains in the system, largest cluster to look for
 numChains = 2000
-lrg_track = 100
+lrg_track = 50
 percent = 0.0
 
 ! get number of files to read
@@ -139,6 +139,7 @@ if (AllErr .ne. 0) then
 	write(*,*) "Failed to allocate the statistics array"
 	stop
 end if
+statsArr = 0.0
 
 ! get the data into the arrays
 time_int = 0
@@ -186,7 +187,7 @@ call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
 write(*,*) "Preparing Outputs"
 call linloop(numChains,tot_time_steps,chainTrack,chain_ends)
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
-call statistics(tot_time_steps,lrg_track,statsArr,percent)
+call statistics(tot_time_steps,lrg_track,statsArr,percent,numChains)
 
 write(*,*) "Number of timesteps checked:", tot_time_steps
 
@@ -487,11 +488,12 @@ close(12)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine statistics(num_tsteps,lrg_track,statsArr,percent)
+subroutine statistics(num_tsteps,lrg_track,statsArr,percent,numChains)
 ! Find some statistics about clusters
 
 implicit none
 	integer,intent(in)	:: num_tsteps, lrg_track ! dimensions of working array
+	integer,intent(in)	:: numChains
 	integer,intent(in)	:: statsArr(num_tsteps,lrg_track) ! Holds cluster
 	 																							! distributions at each timestep
 	real,intent(in)		:: percent
@@ -499,8 +501,8 @@ implicit none
 	integer		:: n ! Will hold total number of clusters
 	real 		  :: num, num_sq ! total chains and total chains squared
 	real		  :: mean, std_dev, variance
+	real			:: l_variance
 	real		  :: numavg(lrg_track) ! For printing
-	real			:: perc_tot ! Overall percentage of chains in a cluster
 	real			:: summed
 
 num = 0
@@ -509,7 +511,6 @@ mean = 0
 std_dev = 0
 variance = 0
 numavg = 0
-perc_tot = 0.0
 summed = 0.0
 ! Value updates
 time_loop: do j = 1, num_tsteps, 1
@@ -517,11 +518,11 @@ time_loop: do j = 1, num_tsteps, 1
 	n = 0
 	num = 0.0
 	num_sq = 0.0
+	l_variance = 0.0
 
 	! Global stuff
 	! x
 	numavg(1) = numavg(1) + statsArr(j,1)
-	perc_tot = float(statsArr(j,1))/2000.0
 	do i = 2, lrg_track, 1
 		num = num + float((i)*statsArr(j,i))
 		numavg(i) = numavg(i) + statsArr(j,i)
@@ -537,7 +538,11 @@ time_loop: do j = 1, num_tsteps, 1
 	mean = mean + num/float(n)
 
 	! variance
-	variance = variance + (num_sq - (num*num/float(n)))/float(n)
+	do i = 1, lrg_track, 1
+		l_variance = l_variance + float(i)*(statsArr(j,i) - mean)
+	end do
+
+	variance = variance + l_variance/sum(statsArr(j,:))
 
 end do time_loop
 
@@ -545,11 +550,11 @@ end do time_loop
 write(*,*) "Statistics Output in file 'Averages.dat'"
 open(unit=13,file="Averages.dat",status="replace",position="append")
 
-std_dev = sqrt(variance)
+std_dev = sqrt(variance/num_tsteps)
 
 write(13,*) "Total Time Steps: ", num_tsteps
-write(13,*) "Average Size: ",(mean/float(num_tsteps))
-write(13,*) "Std devation: ", (std_dev/float(num_tsteps))
+write(13,*) "Average Size: ", (mean/float(num_tsteps))
+write(13,*) "Std devation: ", std_dev
 write(13,*) "Avg. Percentage of Unbound Chains: ", (1.0-percent)
 ! Output for box plot
 write(13,*) "Box Plot"
@@ -558,5 +563,6 @@ do i = 1, lrg_track, 1
 	summed = summed + float(i)*numavg(i)/float(num_tsteps)
 end do
 close(13)
+write(*,*) statsArr(1,:)
 write(*,*) "Averages sum:",summed
 end subroutine
