@@ -246,7 +246,6 @@ time_loop: do i = 1, num_tsteps, 1
 		! get the chains involved
 		chain_a = chain(float(bond_arr(j,2)))
 		chain_b = chain(float(bond_arr(j,3)))
-		! set the endgroups to involved
 		chain_ends(i,chainEnds(bond_arr(j,2))) = 1
 		chain_ends(i,chainEnds(bond_arr(j,3))) = 1
 
@@ -315,12 +314,12 @@ implicit none
 	integer							:: tot_looped, tot_linear ! total # of looped, linear
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
-	integer							:: loop_flag ! flag, if both ends in cluster += 1
-	integer							:: unlooped_flag ! flag, if both ends not in cluster +=1
+	integer							:: unlooped_flag ! flag, if both ends not in a cluster
+	integer							:: looped_flag ! flag, if both ends in a cluster
 	real								:: tot_ratio, ratio ! ratio of looped to linear
 	integer							:: chains_in ! number of chains in the cluster
-	integer							:: loop_multiple, lin_multiple ! clusters with more than 1 chain
-	integer							:: chn_cnt ! counts chains in a cluster
+	integer							:: loop_multiple ! loops with multiple chains
+	integer							:: loop_single, loop_single_tot ! loops with a single chain
 
 ! initializations
 file_out = "loops.dat"
@@ -328,10 +327,11 @@ tot_looped = 0
 tot_linear = 0
 tot_clusters = 0
 tot_ratio = 0
+loop_single_tot = 0
+loop_multiple = 0
+loop_single = 0
 
 open(unit=17, file=trim(file_out), status='replace', position='append')
-loop_multiple = 0
-lin_multiple = 0
 
 ! iterate through time
 time_loop: do i = 1, tot_time, 1
@@ -339,13 +339,13 @@ time_loop: do i = 1, tot_time, 1
 	num_clus = maxval(chains(i,:))
 	looped = 0
 	linear = 0
+	loop_single = 0
 
 	! iterate through clusters
 	clus_loop: do j = 1, num_clus, 1
-		loop_flag = 0
 		unlooped_flag = 0
+		looped_flag = 1
 		chains_in = 0
-		chn_cnt = 0
 		! iterate through the chains
 		chain_loop: do k = 1, num_chains, 1
 
@@ -354,43 +354,54 @@ time_loop: do i = 1, tot_time, 1
 				cycle chain_loop
 			else
 				chains_in = chains_in + 1
-				chn_cnt = chn_cnt + 1
 			end if
 
 			! statement to ensure nothing fishy happened
 			if ((chain_ends(i,2*k) .eq. 0) .and. (chain_ends(i,2*k - 1) .eq. 0)) then
 				write(*,*) "Neither endgroup in a cluster, but the chain is."
 			end if
-			! If both endgroups are in a bond, should be equal
+
+			if (chains(i,k) .ne. j) then
+				write(*,*) "Chain from another cluster caught"
+			end if
+
+			! If both endgroups are not in a bond, can't be a loop
 			if (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1)) then
-				unlooped_flag = unlooped_flag + 1 ! not looped
-			else
-				loop_flag = loop_flag + 1 ! looped
+				unlooped_flag = 1 ! not looped
 			end if
 
 		end do chain_loop
 
-		if (unlooped_flag .gt. 0) then
+		if (chains_in .eq. 0) then
+			cycle clus_loop
+		end if
+
+		if ((unlooped_flag .gt. 0).and.(chains_in .gt. 1)) then
 			linear = linear + 1
-			if (chn_cnt .gt. 1) then
-				lin_multiple = lin_multiple + 1
-			end if
 		else
+			if (chains_in .eq. 0) then
+				write(*,*) "No chain cluster, Err"
+			end if
 			looped = looped + 1
-			if (chn_cnt .gt. 1) then
+			if (chains_in .gt. 1) then
 				loop_multiple = loop_multiple + 1
+			else if (chains_in .eq. 1) then
+				loop_single = loop_single + 1
+				loop_single_tot = loop_single_tot + 1
 			end if
 		end if
 
 	end do clus_loop
 
-	ratio = float(looped)/float(linear)
+	ratio = float(looped)/float(linear+looped)
 	write(17,*) "Timestep:", i
 	write(17,*) "Clusters:", looped+linear
 	write(17,*) "Looped Clusters:", looped
+	write(17,*) "Singly Looped Chains:", loop_single
 	write(17,*) "Linear Clusters:", linear
 	write(17,*) "Ratio Loop/Linear:", ratio
 	tot_looped = tot_looped + looped
+	loop_single_tot = loop_single_tot + loop_single
 	tot_linear = tot_linear + linear
 	tot_ratio = tot_ratio + ratio
 
@@ -399,12 +410,14 @@ end do time_loop
 tot_clusters = tot_looped + tot_linear
 write(17,*) "Total Timesteps:", tot_time
 write(17,*) "Total Clusters:", tot_clusters
+write(17,*) "Average Clusters per Timestep:", float(tot_clusters)/float(tot_time)
 write(17,*) "Total Looped Clusters:", tot_looped
+write(17,*) "Average Single Loops:", float(loop_single_tot)/float(tot_time)
 write(17,*) "Total Linear Clusters:", tot_linear
-write(17,*) "Average Ratio Loop/Linear:", tot_ratio/float(tot_looped+tot_linear)
+write(17,*) "Average Ratio Loop/Linear:", tot_ratio/float(tot_time)
 write(17,*) "Average Looped With Multiple Chains:", float(loop_multiple)/float(tot_time)
 write(17,*) "Total Looped With Multiple Chains:", loop_multiple
-write(17,*) "Ratio of Multiple Chain Loops to total:", float(loop_multiple)/float(loop_multiple+lin_multiple)
+write(17,*) "Ratio of Multiple Chain Loops to Total Looped:", float(loop_multiple)/float(loop_multiple+tot_linear)
 
 close(17)
 
@@ -454,7 +467,7 @@ time_loop: do k = 1, num_tsteps, 1
 	! find number of chains not in a cluster, assign to the output
 	chain_no_clus = (chainIn(k,:) .eq. 0)
 	num_not_assoc = count(chain_no_clus)
-	clusArr(k,1) = num_not_assoc
+	!clusArr(k,1) = num_not_assoc
 	out_count = 1
 	! find maximum cluster
 	maxClus = maxval(chainIn(k,:))
@@ -471,6 +484,8 @@ time_loop: do k = 1, num_tsteps, 1
 			if (chainIn(k,j) .eq. i) then
 				clus_count = clus_count + 1
 			end if
+			! Where are the singles coming from?
+
 
 		end do ClusFndLoop
 
@@ -513,12 +528,18 @@ implicit none
 	 																							! distributions at each timestep
 	real,intent(in)		:: percent
 	integer		:: i, j ! Looping integers
-	integer		:: n, n_avg ! Will hold total number of clusters
-	integer		:: n_local
-	real 		  :: num ! total clusters
-	real		  :: mean, std_dev, variance, mean_l
-	real			:: avg_mult
-	real			:: l_variance
+	integer		:: n ! Will hold total number of clusters, no singles
+	integer		:: n_sngl ! total clusters with singles
+	real			:: n_tot, n_tot_sngl
+	real			:: sz_std_dev_tot, sz_var
+	real			:: sz_std_dev_tot_sngl, sz_var_sngl
+	real			:: loc_avg(num_tsteps) ! holds average cluster size, no singles
+	real			:: loc_avg_sngl(num_tsteps) ! holds average cluster size, with singles
+	real 		  :: num ! total chains in a cluster, no singles
+	real			:: num_sngl ! total chains in a cluster, with singles
+	real		  :: mean, std_dev, variance, mean_t ! no singles
+	real			:: mean_sngl, std_dev_sngl, variance_sngl, mean_t_sngl ! w/ singles
+	real			:: avg_sngls ! avg number of single chain clusters
 	real		  :: numavg(lrg_track) ! For printing
 	real			:: summed
 
@@ -526,56 +547,103 @@ num = 0
 mean = 0
 std_dev = 0
 variance = 0
+num_sngl = 0
+mean_sngl = 0
+std_dev_sngl = 0
+variance_sngl = 0
 numavg = 0
 summed = 0.0
-avg_mult = 0.0
-n_avg = 0
+avg_sngls = 0.0
+loc_avg = 0.0
+loc_avg_sngl = 0.0
+n_tot = 0.0
+n_tot_sngl = 0.0
+sz_std_dev_tot = 0.0
+sz_std_dev_tot_sngl = 0.0
+sz_var = 0.0
+sz_var_sngl = 0.0
+
 ! Value updates
 time_loop: do j = 1, num_tsteps, 1
 
 	n = 0
-	n_local = 0
+	n_sngl = 0
 	num = 0.0
-	l_variance = 0.0
+	num_sngl = 0.0
+	sz_var = 0.0
+	sz_var_sngl = 0.0
 
 	! Global stuff
 	! x
 	numavg(1) = numavg(1) + statsArr(j,1)
-	n_local = n_local + statsArr(j,1)
+	n_sngl = n_sngl + statsArr(j,1)
+	num_sngl = statsArr(j,1)
 	do i = 2, lrg_track, 1
 		num = num + float((i)*statsArr(j,i))
+		num_sngl = num_sngl + float(i)*statsArr(j,i)
 		numavg(i) = numavg(i) + statsArr(j,i)
-		n = n + statsArr(j,i)
-		n_local = n_local + statsArr(j,i)
+		n = n + statsArr(j,i) ! get total number of clusters
+		n_sngl = n_sngl + statsArr(j,i) ! total number of clusters w/ singles
 	end do
 
-	! mean
-	mean = mean + num/float(n)
-	avg_mult = avg_mult + (num+statsArr(j,1))/float(n_local)
-	mean_l = num/float(n)
+	n_tot = n_tot + float(n)
+	n_tot_sngl = n_tot_sngl + float(n_sngl)
 
-	! variance
-	do i = 1, lrg_track, 1
-		l_variance = l_variance + ((float(i)*(statsArr(j,i) - mean_l))**2)/float(n)
+	! no singles
+	! mean number of chains per cluster, save to array
+	mean = num/float(n)
+	loc_avg(j) = mean
+
+	! with singles
+	! mean number of chains per cluster, save to array
+	mean_sngl = num_sngl/float(n_sngl)
+	loc_avg_sngl(j) = mean_sngl
+
+	! std deviation of cluster size
+	sz_var_sngl = float(statsArr(j,1)) * (1.0 - mean_sngl)**2
+	do i = 2, lrg_track, 1
+		sz_var = sz_var + float(statsArr(j,i)) * (float(i)-mean)**2
+		sz_var_sngl = sz_var_sngl + float(statsArr(j,i)) * (float(i)-mean_sngl)**2
 	end do
 
-	n_avg = n_avg + n_local
+	sz_var = sz_var/num
+	sz_var_sngl = sz_var_sngl/num_sngl
 
-	variance = variance + l_variance
+	sz_std_dev_tot = sz_std_dev_tot + sqrt(sz_var)
+	sz_std_dev_tot_sngl = sz_std_dev_tot_sngl + sqrt(sz_var_sngl)
 
 end do time_loop
+
+! find std dev.
+mean_t = sum(loc_avg)/float(num_tsteps)
+mean_t_sngl = sum(loc_avg_sngl)/float(num_tsteps)
+
+do j = 1, num_tsteps, 1
+	! no singles
+	variance = variance + (loc_avg(j) - mean_t)**2
+	! singles
+	variance_sngl = variance_sngl + (loc_avg_sngl(j) - mean_t_sngl)**2
+end do
+variance = variance/float(num_tsteps)
+std_dev = sqrt(variance)
+
+variance_sngl = variance_sngl/float(num_tsteps)
+std_dev_sngl = sqrt(variance_sngl)
 
 ! Final output
 write(*,*) "Statistics Output in file 'Averages.dat'"
 open(unit=13,file="Averages.dat",status="replace",position="append")
-
-std_dev = sqrt(variance/num_tsteps)
+write(13,*) "Box Plot section involves only chains involved in a bond."
 
 write(13,*) "Total Time Steps: ", num_tsteps
-write(13,*) "Average Size: ", (mean/float(num_tsteps))
-write(13,*) "Average Size with Singles: ", (avg_mult/float(num_tsteps))
-write(13,*) "Std devation Over Time: ", std_dev
-write(13,*) "Avg. Number of Clusters: ", float(n_avg)/float(num_tsteps)
+write(13,*) "Average Cluster Size: ", mean_t
+write(13,*) "Average Cluster Size with Singles: ", mean_t_sngl
+write(13,*) "Std devation of Cluster Size (no singles): ", sz_std_dev_tot/float(num_tsteps)
+write(13,*) "Std devation of Cluster Size (w/ singles): ", sz_std_dev_tot_sngl/float(num_tsteps)
+write(13,*) "Std devation of Mean Over Time (no singles): ", std_dev
+write(13,*) "Std devation of Mean Over Time (w/ singles): ", std_dev_sngl
+write(13,*) "Avg. Number of Clusters (no singles): ", (n_tot)/float(num_tsteps)
+write(13,*) "Avg. Number of Clusters (w/ singles): ", (n_tot_sngl)/float(num_tsteps)
 write(13,*) "Avg. Percentage of Unbound Chains: ", (1.0-percent)
 ! Output for box plot
 write(13,*) "Box Plot"
@@ -584,6 +652,5 @@ do i = 1, lrg_track, 1
 	summed = summed + float(i)*numavg(i)/float(num_tsteps)
 end do
 close(13)
-write(*,*) statsArr(1,:)
 write(*,*) "Averages sum:",summed
 end subroutine
