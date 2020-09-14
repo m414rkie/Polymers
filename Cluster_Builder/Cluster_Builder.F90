@@ -308,9 +308,10 @@ implicit none
 																								! cluster a chain end belongs to
 	integer,intent(in)	:: chains(tot_time,num_chains) ! holds which chains
 																											! belong to which cluster
-	integer							:: i, j, k ! looping integers
-	character*50				:: file_out ! name of output file
-	integer							:: looped, linear ! # looped an linear clusters at a time
+	integer							:: i, j, k, m ! looping integers
+	character*50				:: file_out, file_out_clus ! names of output files
+	integer							:: looped, linear ! looped and linear clusters at a time
+	integer							:: cluster_chains(50) ! holds which chains are in a cluster
 	integer							:: tot_looped, tot_linear ! total # of looped, linear
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
@@ -323,6 +324,7 @@ implicit none
 
 ! initializations
 file_out = "loops.dat"
+file_out_clus = "looped_cluster_chains.dat"
 tot_looped = 0
 tot_linear = 0
 tot_clusters = 0
@@ -330,8 +332,12 @@ tot_ratio = 0
 loop_single_tot = 0
 loop_multiple = 0
 loop_single = 0
+cluster_chains = 0
 
 open(unit=17, file=trim(file_out), status='replace', position='append')
+open(unit=18, file=trim(file_out_clus), status='replace', position='append')
+write(18,*) "Cluster number may not match with number found elsewhere"
+write(18,*) "Format: Cluster, chains"
 
 ! iterate through time
 time_loop: do i = 1, tot_time, 1
@@ -340,6 +346,10 @@ time_loop: do i = 1, tot_time, 1
 	looped = 0
 	linear = 0
 	loop_single = 0
+	cluster_chains = 0
+
+	write(18,*) "Timestep:", i
+
 
 	! iterate through clusters
 	clus_loop: do j = 1, num_clus, 1
@@ -354,6 +364,7 @@ time_loop: do i = 1, tot_time, 1
 				cycle chain_loop
 			else
 				chains_in = chains_in + 1
+				cluster_chains(chains_in) = k
 			end if
 
 			! statement to ensure nothing fishy happened
@@ -382,6 +393,13 @@ time_loop: do i = 1, tot_time, 1
 			if (chains_in .eq. 0) then
 				write(*,*) "No chain cluster, Err"
 			end if
+			! output chains to file
+			write(18,'(1i3, ", ")',ADVANCE='no') j
+			do m = 1, chains_in, 1
+				write(18,'(1i4, " ")',ADVANCE='no')  cluster_chains(m)
+			end do
+			write(18,*) ""
+
 			looped = looped + 1
 			if (chains_in .gt. 1) then
 				loop_multiple = loop_multiple + 1
@@ -420,6 +438,7 @@ write(17,*) "Total Looped With Multiple Chains:", loop_multiple
 write(17,*) "Ratio of Multiple Chain Loops to Total Looped:", float(loop_multiple)/float(loop_multiple+tot_linear)
 
 close(17)
+close(18)
 
 end subroutine
 
