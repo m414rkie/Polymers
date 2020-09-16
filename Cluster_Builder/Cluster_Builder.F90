@@ -316,7 +316,6 @@ implicit none
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
 	integer							:: unlooped_flag ! flag, if both ends not in a cluster
-	integer							:: looped_flag ! flag, if both ends in a cluster
 	real								:: tot_ratio, ratio ! ratio of looped to linear
 	integer							:: chains_in ! number of chains in the cluster
 	integer							:: loop_multiple ! loops with multiple chains
@@ -354,7 +353,6 @@ time_loop: do i = 1, tot_time, 1
 	! iterate through clusters
 	clus_loop: do j = 1, num_clus, 1
 		unlooped_flag = 0
-		looped_flag = 1
 		chains_in = 0
 		! iterate through the chains
 		chain_loop: do k = 1, num_chains, 1
@@ -417,7 +415,7 @@ time_loop: do i = 1, tot_time, 1
 	write(17,*) "Looped Clusters:", looped
 	write(17,*) "Singly Looped Chains:", loop_single
 	write(17,*) "Linear Clusters:", linear
-	write(17,*) "Ratio Loop/Linear:", ratio
+	write(17,*) "Ratio Loop/Total:", ratio
 	tot_looped = tot_looped + looped
 	loop_single_tot = loop_single_tot + loop_single
 	tot_linear = tot_linear + linear
@@ -432,7 +430,7 @@ write(17,*) "Average Clusters per Timestep:", float(tot_clusters)/float(tot_time
 write(17,*) "Total Looped Clusters:", tot_looped
 write(17,*) "Average Single Loops:", float(loop_single_tot)/float(tot_time)
 write(17,*) "Total Linear Clusters:", tot_linear
-write(17,*) "Average Ratio Loop/Linear:", tot_ratio/float(tot_time)
+write(17,*) "Average Ratio Loop/Total:", tot_ratio/float(tot_time)
 write(17,*) "Average Looped With Multiple Chains:", float(loop_multiple)/float(tot_time)
 write(17,*) "Total Looped With Multiple Chains:", loop_multiple
 write(17,*) "Ratio of Multiple Chain Loops to Total Looped:", float(loop_multiple)/float(loop_multiple+tot_linear)
