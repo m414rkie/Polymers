@@ -403,7 +403,6 @@ time_loop: do i = 1, tot_time, 1
 				loop_multiple = loop_multiple + 1
 			else if (chains_in .eq. 1) then
 				loop_single = loop_single + 1
-				loop_single_tot = loop_single_tot + 1
 			end if
 		end if
 
