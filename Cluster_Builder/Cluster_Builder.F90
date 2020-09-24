@@ -187,7 +187,7 @@ call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
 write(*,*) "Preparing Outputs"
 call linloop(numChains,tot_time_steps,chainTrack,chain_ends)
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
-call statistics(tot_time_steps,lrg_track,statsArr,percent,numChains)
+call statistics(tot_time_steps,lrg_track,statsArr,percent)
 
 write(*,*) "Number of timesteps checked:", tot_time_steps
 
@@ -218,6 +218,7 @@ implicit none
 	integer		:: bonds_counted, chn_count
 	integer		:: clus_a, clus_b
 	integer		:: chain_a, chain_b
+	integer		:: end_a, end_b
 
 ! Initialize
 bonds_counted = 0
@@ -246,8 +247,21 @@ time_loop: do i = 1, num_tsteps, 1
 		! get the chains involved
 		chain_a = chain(float(bond_arr(j,2)))
 		chain_b = chain(float(bond_arr(j,3)))
-		chain_ends(i,chainEnds(bond_arr(j,2))) = 1
-		chain_ends(i,chainEnds(bond_arr(j,3))) = 1
+
+		if ((bond_arr(j,2) - (40*(chain_a-1))) .gt. 20) then
+			end_a = 2*chain_a
+		else if ((bond_arr(j,2) - (40*(chain_a-1))) .lt. 20) then
+			end_a = 2*chain_a - 1
+		end if
+		if ((bond_arr(j,3) - (40*(chain_b-1))) .gt. 20) then
+			end_b = 2*chain_b
+		else if ((bond_arr(j,2) - (40*(chain_b-1))) .lt. 20) then
+			end_b = 2*chain_b - 1
+		end if
+
+	!	write(*,*) bond_arr(j,2), chain_a, end_a, bond_arr(j,3), chain_b, end_b
+		chain_ends(i,end_a) = 1
+		chain_ends(i,end_b) = 1
 
 		! If both chains are not involved in a cluster, put them in new cluster
 		if ((chainIn(i,chain_a) .eq. 0) .and. (chainIn(i,chain_b) .eq. 0)) then
@@ -272,8 +286,7 @@ time_loop: do i = 1, num_tsteps, 1
 		end if
 
 		! If both chains are in a cluster, assign all chains to first cluster
-		if ((chainIn(i,chain_a) .ne. 0) .and. (chainIn(i,chain_b) .ne. 0) .and. &
-					(chainIn(i,chain_a) .ne. chainIn(i,chain_b))) then
+		if ((chainIn(i,chain_a) .ne. 0) .and. (chainIn(i,chain_b) .ne. 0)) then
 			clus_a = chainIn(i,chain_a)
 			clus_b = chainIn(i,chain_b)
 			where (chainIn(i,:) .eq. clus_b) chainIn(i,:) = clus_a
@@ -311,14 +324,15 @@ implicit none
 	integer							:: i, j, k, m ! looping integers
 	character*50				:: file_out, file_out_clus ! names of output files
 	integer							:: looped, linear ! looped and linear clusters at a time
-	integer							:: cluster_chains(50) ! holds which chains are in a cluster
+	integer							:: end_a, end_b ! ends of the chain.
+	integer							:: cluster_chains(100) ! holds which chains are in a cluster
 	integer							:: tot_looped, tot_linear ! total # of looped, linear
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
 	integer							:: unlooped_flag ! flag, if both ends not in a cluster
 	real								:: tot_ratio, ratio ! ratio of looped to linear
 	integer							:: chains_in ! number of chains in the cluster
-	integer							:: loop_multiple ! loops with multiple chains
+	integer							:: loop_multiple, loop_mult_tot ! loops with multiple chains
 	integer							:: loop_single, loop_single_tot ! loops with a single chain
 
 ! initializations
@@ -332,6 +346,8 @@ loop_single_tot = 0
 loop_multiple = 0
 loop_single = 0
 cluster_chains = 0
+unlooped_flag = 0
+loop_mult_tot = 0
 
 open(unit=17, file=trim(file_out), status='replace', position='append')
 open(unit=18, file=trim(file_out_clus), status='replace', position='append')
@@ -349,7 +365,6 @@ time_loop: do i = 1, tot_time, 1
 
 	write(18,*) "Timestep:", i
 
-
 	! iterate through clusters
 	clus_loop: do j = 1, num_clus, 1
 		unlooped_flag = 0
@@ -362,20 +377,21 @@ time_loop: do i = 1, tot_time, 1
 				cycle chain_loop
 			else
 				chains_in = chains_in + 1
+				end_a = 2*k
+				end_b = (2*k) - 1
 				cluster_chains(chains_in) = k
 			end if
 
-			! statement to ensure nothing fishy happened
-			if ((chain_ends(i,2*k) .eq. 0) .and. (chain_ends(i,2*k - 1) .eq. 0)) then
+			! statements to ensure nothing fishy happened
+			if ((chain_ends(i,end_a) .eq. 0) .and. (chain_ends(i,end_b) .eq. 0)) then
 				write(*,*) "Neither endgroup in a cluster, but the chain is."
 			end if
-
 			if (chains(i,k) .ne. j) then
 				write(*,*) "Chain from another cluster caught"
 			end if
 
 			! If both endgroups are not in a bond, can't be a loop
-			if (chain_ends(i,2*k) .ne. chain_ends(i,2*k - 1)) then
+			if ((chain_ends(i,end_a) .eq. 0).or.(chain_ends(i,end_b) .eq. 0)) then
 				unlooped_flag = 1 ! not looped
 			end if
 
@@ -385,23 +401,19 @@ time_loop: do i = 1, tot_time, 1
 			cycle clus_loop
 		end if
 
-		if ((unlooped_flag .gt. 0).and.(chains_in .gt. 1)) then
+		if ((unlooped_flag .eq. 1).and.(chains_in .gt. 1)) then
 			linear = linear + 1
 		else
-			if (chains_in .eq. 0) then
-				write(*,*) "No chain cluster, Err"
-			end if
+			looped = looped + 1
 			! output chains to file
 			write(18,'(1i3, ", ")',ADVANCE='no') j
 			do m = 1, chains_in, 1
 				write(18,'(1i4, " ")',ADVANCE='no')  cluster_chains(m)
 			end do
 			write(18,*) ""
-
-			looped = looped + 1
 			if (chains_in .gt. 1) then
 				loop_multiple = loop_multiple + 1
-			else if (chains_in .eq. 1) then
+			else
 				loop_single = loop_single + 1
 			end if
 		end if
@@ -413,10 +425,12 @@ time_loop: do i = 1, tot_time, 1
 	write(17,*) "Clusters:", looped+linear
 	write(17,*) "Looped Clusters:", looped
 	write(17,*) "Singly Looped Chains:", loop_single
+	write(17,*) "Multiple Looped Chains", loop_multiple
 	write(17,*) "Linear Clusters:", linear
 	write(17,*) "Ratio Loop/Total:", ratio
 	tot_looped = tot_looped + looped
 	loop_single_tot = loop_single_tot + loop_single
+	loop_mult_tot = loop_mult_tot + loop_multiple
 	tot_linear = tot_linear + linear
 	tot_ratio = tot_ratio + ratio
 
@@ -534,12 +548,11 @@ close(12)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine statistics(num_tsteps,lrg_track,statsArr,percent,numChains)
+subroutine statistics(num_tsteps,lrg_track,statsArr,percent)
 ! Find some statistics about clusters
 
 implicit none
 	integer,intent(in)	:: num_tsteps, lrg_track ! dimensions of working array
-	integer,intent(in)	:: numChains
 	integer,intent(in)	:: statsArr(num_tsteps,lrg_track) ! Holds cluster
 	 																							! distributions at each timestep
 	real,intent(in)		:: percent
