@@ -446,7 +446,8 @@ write(17,*) "Total Linear Clusters:", tot_linear
 write(17,*) "Average Ratio Loop/Total:", tot_ratio/float(tot_time)
 write(17,*) "Average Looped With Multiple Chains:", float(loop_multiple)/float(tot_time)
 write(17,*) "Total Looped With Multiple Chains:", loop_multiple
-write(17,*) "Ratio of Multiple Chain Loops to Total Looped:", float(loop_multiple)/float(loop_multiple+tot_linear)
+write(17,*) "Ratio of Multiple Chain Loops to Total Looped:", &
+										float(loop_multiple)/float(loop_mult_tot+loop_single_tot)
 
 close(17)
 close(18)
