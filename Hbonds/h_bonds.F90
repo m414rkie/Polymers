@@ -1,6 +1,6 @@
 ! Program takes an output file from the LAMMPS software package and
 ! reads in the location and type of each molecule. From this, this
-! program attempts to determine which beads of type 2 (H) are bonded in a
+! program attempts to determine which beads of type 5 (H) are bonded in a
 ! pair-wise fashion.
 
 ! This version does not track chains, only beads
@@ -17,8 +17,9 @@ implicit none
 	integer				:: tot_time_steps, num_step
 	integer				:: ioErr, AllErr
 	integer				:: j, first
-	real,allocatable	:: molData(:,:,:) ! time,numMols,(bead,moltype,x,y,z)
-	real,allocatable	:: bonds(:,:) ! time, numMols holds associations
+	real,allocatable		:: molData(:,:,:) ! time,numMols,(bead,moltype,x,y,z)
+	real,allocatable		:: bonds(:,:) ! time, numMols holds associations
+	integer,allocatable	:: stats(:,:) ! time, numMols holds associations
 
 
 ! Number of beads in the system
@@ -83,6 +84,13 @@ if (AllErr .ne. 0) then
 	stop
 end if
 bonds = 0
+allocate(stats(tot_time_steps,25), stat = AllErr)
+if (AllErr .ne. 0) then
+	write(*,*) "Failed to allocate stats array. Exiting"
+	write(*,*) "Error status", AllErr
+	stop
+end if
+stats = 0
 
 ! collect the data
 open(unit=15, file=filename, status="old", action="read", iostat=ioErr)
@@ -108,7 +116,9 @@ end do data_collect
 write(*,*) "Determining bonds"
 call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma)
 write(*,*) "Sorting output"
-call output(tot_time_steps,numMols,bonds)
+call output(tot_time_steps,numMols,bonds,stats)
+write(*,*) "Finding Distribution"
+call statistics(tot_time_steps,25,stats)
 
 write(*,*) "End of data reached. Goodbye"
 
@@ -125,15 +135,20 @@ implicit none
 	real,intent(inout) 	:: bonds_out(tsteps,numMols) ! output array
 	real,intent(in)			:: dParam  ! Distance parameter
 
-	integer					:: i, j, k ! Looping integers
-	integer					:: bonds, bond_count ! number of bonds found
-	integer					:: cur_bond, flg ! bond number being assigned
-	real						:: x1,x2, y1,y2, z1,z2 ! xyz positions
-	real						:: near ! distance between two beads
-	real						:: r, a,b, c,d, e,f ! function variables
+	integer			:: i, j, k ! Looping integers
+	integer			:: b_type = 2 ! type of bead we care about
+	integer			:: bonds, bond_count ! number of bonds found
+	integer			:: cur_bond, flg ! bond number being assigned
+	real				:: x1,x2, y1,y2, z1,z2 ! xyz positions
+	real				:: dx, dy, dz, d_lim ! axial distances and the max distance
+	real				:: near ! distance between two beads
+	real				:: r, a, b, c ! function variables
+
 
 ! simple 3d distance formula
-r(a,b,c,d,e,f) = sqrt((b-a)**2 + (d-c)**2 + (f-e)**2)
+r(a,b,c) = sqrt((a)**2 + (b)**2 + (c)**2)
+
+d_lim = 101.5 ! assuming a cubic volume here of length 203
 
 ! Nested do loops iterate through the data. When conditions are met assigns the
 ! current molecules to a cluster
@@ -170,7 +185,7 @@ time_Loop: do i = 1, tsteps, 1
 		bonds = 0
 		flg = 0
 		! cycle if not the correct bead type
-		if (nint(datin(i,j,2)) .ne. 2) then
+		if (nint(datin(i,j,2)) .ne. b_type) then
 			cycle bond_loop
 		end if
 		! assign position variables for first bead
@@ -187,7 +202,7 @@ time_Loop: do i = 1, tsteps, 1
 		attachment_loop: do k = 1, numMols, 1
 			! cycle if same bead or incorrect type
 			if ((nint(datin(i,k,1)).eq.nint(datin(i,j,1))).or. &
-																							(nint(datin(i,k,2)) .ne. 2)) then
+																					(nint(datin(i,k,2)) .ne. b_type)) then
 				cycle attachment_loop
 			end if
 
@@ -201,8 +216,22 @@ time_Loop: do i = 1, tsteps, 1
 			x2 = datin(i,k,3)
 			y2 = datin(i,k,4)
 			z2 = datin(i,k,5)
+			! Get distances
+			dx = abs(x2-x1)
+			dy = abs(y2-y1)
+			dz = abs(z2-z1)
+			! Handle periodic boundary conditions
+			if (dx .gt. d_lim) then
+				dx = dx - d_lim
+			end if
+			if (dx .gt. d_lim) then
+				dy = dy - d_lim
+			end if
+			if (dz .gt. d_lim) then
+				dz = dz - d_lim
+			end if
 
-			near = r(x1,x2,y1,y2,z1,z2)
+			near = r(dx,dy,dz)
 
 			if (near .le. dParam) then
 				bonds = bonds + 1
@@ -226,19 +255,22 @@ close(19)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine output(tsteps,numMols,bonds)
+subroutine output(tsteps,numMols,bonds,micelle_bins)
 ! subroutine to output the results
 
 implicit none
-	integer,intent(in)	:: tsteps, numMols
-	real,intent(in) 		:: bonds(tsteps,numMols)
+	integer,intent(in)		:: tsteps, numMols
+	real,intent(in) 			:: bonds(tsteps,numMols)
+	integer,intent(inout)	:: micelle_bins(tsteps,25) ! Holds micelle sizes
 
-	character*25				:: out_file ! filename for output
+
+	character*25				:: out_file , stats_file! filename for output
 	integer							:: i, j, k ! looping integers
 	integer							:: max_bonds ! number of bonds in the timestep
 	integer							:: count ! number of beads in the cluster
 
 out_file = "h_bonds.dat"
+stats_file = "micelle_stats.dat"
 
 open(unit=19,file=trim(out_file),status="replace",position="append")
 
@@ -283,8 +315,19 @@ time_loop: do i = 1, tsteps, 1
 			end if
 
 		end do bead_loop
+
+		if (count .eq. 0) then
+			cycle cluster_loop
+		end if
+
 		if (count .gt. 0) then
 			write(19,*) count
+		end if
+
+		if (count .ge. 25) then
+			micelle_bins(i,25) = 	micelle_bins(i,25) + 1
+		else
+			micelle_bins(i,count) = 	micelle_bins(i,count) + 1
 		end if
 
 	end do cluster_loop
@@ -293,8 +336,103 @@ end do time_loop
 
 close(19)
 
-write(*,*) "Outputs found in ", out_file
+write(*,*) "Micelle beads found in ", out_file
 
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine statistics(num_tsteps,lrg_track,statsArr)
+! Find some statistics about clusters
+
+implicit none
+	integer,intent(in)	:: num_tsteps, lrg_track ! dimensions of working array
+	integer,intent(in)	:: statsArr(num_tsteps,lrg_track) ! Holds cluster
+	 																							! distributions at each timestep
+	integer		:: i, j ! Looping integers
+	integer		:: n ! Will hold total number of clusters, no singles
+	integer		:: n_sngl ! total clusters with singles
+	real			:: n_tot
+	real			:: sz_std_dev_tot, sz_var
+	real			:: loc_avg(num_tsteps) ! holds average cluster size, no singles
+	real 		  :: num ! total chains in a cluster, no singles
+	real			:: num_sngl ! total chains in a cluster, with singles
+	real		  :: mean, std_dev, variance, mean_t ! no singles
+	real		  :: numavg(lrg_track) ! For printing
+	real			:: summed
+
+num = 0
+mean = 0
+std_dev = 0
+variance = 0
+numavg = 0
+summed = 0.0
+loc_avg = 0.0
+n_tot = 0.0
+sz_std_dev_tot = 0.0
+sz_var = 0.0
+
+! Value updates
+time_loop: do j = 1, num_tsteps, 1
+
+	n = 0
+	n_sngl = 0
+	num = 0.0
+	sz_var = 0.0
+
+	! Global stuff
+	! x
+	numavg(1) = numavg(1) + statsArr(j,1)
+	num_sngl = statsArr(j,1)
+	do i = 2, lrg_track, 1
+		num = num + float((i)*statsArr(j,i))
+		numavg(i) = numavg(i) + statsArr(j,i)
+		n = n + statsArr(j,i) ! get total number of clusters
+	end do
+
+	n_tot = n_tot + float(n)
+
+	! no singles
+	! mean number of chains per cluster, save to array
+	mean = num/float(n)
+	loc_avg(j) = mean
+
+	! std deviation of cluster size
+	do i = 2, lrg_track, 1
+		sz_var = sz_var + float(statsArr(j,i)) * (float(i)-mean)**2
+	end do
+
+	sz_var = sz_var/num
+
+	sz_std_dev_tot = sz_std_dev_tot + sqrt(sz_var)
+
+end do time_loop
+
+! find std dev.
+mean_t = sum(loc_avg)/float(num_tsteps)
+
+do j = 1, num_tsteps, 1
+	variance = variance + (loc_avg(j) - mean_t)**2
+end do
+variance = variance/float(num_tsteps)
+std_dev = sqrt(variance)
+
+
+! Final output
+write(*,*) "Statistics Output in file 'hh_Averages.dat'"
+open(unit=13,file="hh_Averages.dat",status="replace",position="append")
+write(13,*) "Box Plot section involves only chains involved in a bond."
+
+write(13,*) "Total Time Steps: ", num_tsteps
+write(13,*) "Average Micelle Size: ", mean_t
+write(13,*) "Std devation of Cluster Size: ", sz_std_dev_tot/float(num_tsteps)
+write(13,*) "Std devation of Mean Over Time: ", std_dev
+write(13,*) "Avg. Number of Clusters: ", (n_tot)/float(num_tsteps)
+! Output for box plot
+write(13,*) "Box Plot"
+do i = 1, lrg_track, 1
+	write(13,*) i, numavg(i)/float(num_tsteps)
+	summed = summed + float(i)*numavg(i)/float(num_tsteps)
+end do
+close(13)
+write(*,*) "Averages sum:",summed
+end subroutine

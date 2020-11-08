@@ -259,6 +259,11 @@ time_loop: do i = 1, num_tsteps, 1
 			end_b = 2*chain_b - 1
 		end if
 
+		! skip if same chain end
+		if (end_a .eq. end_b) then
+			cycle ClusLoop
+		end if
+
 	!	write(*,*) bond_arr(j,2), chain_a, end_a, bond_arr(j,3), chain_b, end_b
 		chain_ends(i,end_a) = 1
 		chain_ends(i,end_b) = 1

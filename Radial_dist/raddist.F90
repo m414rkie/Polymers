@@ -204,17 +204,6 @@ outer_loop : do i = 1, dim1, 1
 							cycle inner_loop
 					end if
 
-					! skip if same bead as 1
-					distance = dist(xd,yd,zd)
-
-					! Set bead into correct distance box
-					d = nint(distance)
-
-					! Should not happen, but will prevent crashing in rare cases
-					if (d .gt. r_num) then
-							d = r_num
-					end if
-
 					if (j .eq. i) then
 						cycle inner_loop
 					end if
@@ -274,8 +263,7 @@ do d = 1, r_num, 1
 end do
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
-arrout_temp = arrout_temp*vol/count_tot
-arrout_temp = arrout_temp/count_tot
+arrout_temp = arrout_temp*vol/(count_tot*count_tot)
 
 
 ! User output
