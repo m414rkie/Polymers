@@ -136,7 +136,7 @@ implicit none
 	real,intent(in)			:: dParam  ! Distance parameter
 
 	integer			:: i, j, k ! Looping integers
-	integer			:: b_type = 2 ! type of bead we care about
+	integer			:: b_type = 5 ! type of bead we care about
 	integer			:: bonds, bond_count ! number of bonds found
 	integer			:: cur_bond, flg ! bond number being assigned
 	real				:: x1,x2, y1,y2, z1,z2 ! xyz positions
