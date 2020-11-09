@@ -118,7 +118,7 @@ call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma)
 write(*,*) "Sorting output"
 call output(tot_time_steps,numMols,bonds,stats)
 write(*,*) "Finding Distribution"
-call statistics(tot_time_steps,25,stats)
+call statistics(tot_time_steps,100,stats)
 
 write(*,*) "End of data reached. Goodbye"
 
@@ -261,7 +261,7 @@ subroutine output(tsteps,numMols,bonds,micelle_bins)
 implicit none
 	integer,intent(in)		:: tsteps, numMols
 	real,intent(in) 			:: bonds(tsteps,numMols)
-	integer,intent(inout)	:: micelle_bins(tsteps,25) ! Holds micelle sizes
+	integer,intent(inout)	:: micelle_bins(tsteps,100) ! Holds micelle sizes
 
 
 	character*25				:: out_file , stats_file! filename for output
@@ -324,8 +324,8 @@ time_loop: do i = 1, tsteps, 1
 			write(19,*) count
 		end if
 
-		if (count .ge. 25) then
-			micelle_bins(i,25) = 	micelle_bins(i,25) + 1
+		if (count .ge. 100) then
+			micelle_bins(i,100) = 	micelle_bins(i,100) + 1
 		else
 			micelle_bins(i,count) = 	micelle_bins(i,count) + 1
 		end if
