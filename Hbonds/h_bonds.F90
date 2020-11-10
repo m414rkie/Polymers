@@ -138,7 +138,8 @@ implicit none
 	integer			:: i, j, k ! Looping integers
 	integer			:: b_type = 5 ! type of bead we care about
 	integer			:: bonds, bond_count ! number of bonds found
-	integer			:: cur_bond, flg ! bond number being assigned
+	integer			:: old_bond ! holds bond number we are changing if needed.
+	integer			:: cur_bond, flg ! bond number being assigned, flg if bond exists
 	real				:: x1,x2, y1,y2, z1,z2 ! xyz positions
 	real				:: dx, dy, dz, d_lim ! axial distances and the max distance
 	real				:: near ! distance between two beads
@@ -178,7 +179,6 @@ time_Loop: do i = 1, tsteps, 1
 		write(*,*) "Clustering 90% complete"
 	end if
 
-
 	bonds = 0
 	bond_count = 1
 	bond_loop: do j = 1, numMols, 1
@@ -207,8 +207,14 @@ time_Loop: do i = 1, tsteps, 1
 			end if
 
 			if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 0)) then
+			! second bead has a bond and first does not
 				cur_bond = int(bonds_out(i,nint(datin(i,k,1))))
-			else
+			else if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 1)) then
+			! both beads have a bond, set all beads w/ second bond to first bond
+				old_bond = bonds_out(i,nint(datin(i,k,1)))
+				where (bonds_out(i,:) .eq. old_bond) bonds_out(i,:) = cur_bond
+			else if ((bonds_out(i,nint(datin(i,k,1))) .eq. 0) .and. (flg .eq. 0)) then
+			! neither has a bond.
 				cur_bond = bond_count
 			end if
 
@@ -247,10 +253,7 @@ time_Loop: do i = 1, tsteps, 1
 
 	end do bond_loop
 
-
 end do time_loop
-
-close(19)
 
 end subroutine
 
@@ -273,7 +276,6 @@ out_file = "h_bonds.dat"
 stats_file = "micelle_stats.dat"
 
 open(unit=19,file=trim(out_file),status="replace",position="append")
-
 
 ! iterate through time
 time_loop: do i = 1, tsteps, 1
@@ -355,7 +357,6 @@ implicit none
 	real			:: sz_std_dev_tot, sz_var
 	real			:: loc_avg(num_tsteps) ! holds average cluster size, no singles
 	real 		  :: num ! total chains in a cluster, no singles
-	real			:: num_sngl ! total chains in a cluster, with singles
 	real		  :: mean, std_dev, variance, mean_t ! no singles
 	real		  :: numavg(lrg_track) ! For printing
 	real			:: summed
@@ -415,7 +416,6 @@ do j = 1, num_tsteps, 1
 end do
 variance = variance/float(num_tsteps)
 std_dev = sqrt(variance)
-
 
 ! Final output
 write(*,*) "Statistics Output in file 'hh_Averages.dat'"
