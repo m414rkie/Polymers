@@ -211,7 +211,7 @@ time_Loop: do i = 1, tsteps, 1
 				cur_bond = int(bonds_out(i,nint(datin(i,k,1))))
 			else if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 1)) then
 			! both beads have a bond, set all beads w/ second bond to first bond
-				old_bond = bonds_out(i,nint(datin(i,k,1)))
+				old_bond = int(bonds_out(i,nint(datin(i,k,1))))
 				where (bonds_out(i,:) .eq. old_bond) bonds_out(i,:) = cur_bond
 			else if ((bonds_out(i,nint(datin(i,k,1))) .eq. 0) .and. (flg .eq. 0)) then
 			! neither has a bond.
@@ -383,7 +383,6 @@ time_loop: do j = 1, num_tsteps, 1
 	! Global stuff
 	! x
 	numavg(1) = numavg(1) + statsArr(j,1)
-	num_sngl = statsArr(j,1)
 	do i = 2, lrg_track, 1
 		num = num + float((i)*statsArr(j,i))
 		numavg(i) = numavg(i) + statsArr(j,i)
@@ -421,7 +420,6 @@ std_dev = sqrt(variance)
 write(*,*) "Statistics Output in file 'hh_Averages.dat'"
 open(unit=13,file="hh_Averages.dat",status="replace",position="append")
 write(13,*) "Box Plot section involves only chains involved in a bond."
-
 write(13,*) "Total Time Steps: ", num_tsteps
 write(13,*) "Average Micelle Size: ", mean_t
 write(13,*) "Std devation of Cluster Size: ", sz_std_dev_tot/float(num_tsteps)
