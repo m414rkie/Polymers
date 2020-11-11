@@ -14,6 +14,7 @@ implicit none
 	character*50	:: filename
 	real				  :: sigma, tstep
 	integer				:: numMols
+	integer				:: bond_mx ! maximum number of bonds per micelle
 	integer				:: tot_time_steps, num_step
 	integer				:: ioErr, AllErr
 	integer				:: j, first
@@ -24,7 +25,7 @@ implicit none
 
 ! Number of beads in the system
 numMols = 80000
-
+bond_mx = 100
 first = 0
 
 ! User input and initializations
@@ -84,7 +85,7 @@ if (AllErr .ne. 0) then
 	stop
 end if
 bonds = 0
-allocate(stats(tot_time_steps,25), stat = AllErr)
+allocate(stats(tot_time_steps,bond_mx), stat = AllErr)
 if (AllErr .ne. 0) then
 	write(*,*) "Failed to allocate stats array. Exiting"
 	write(*,*) "Error status", AllErr
@@ -118,7 +119,7 @@ call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma)
 write(*,*) "Sorting output"
 call output(tot_time_steps,numMols,bonds,stats)
 write(*,*) "Finding Distribution"
-call statistics(tot_time_steps,100,stats)
+call statistics(tot_time_steps,bond_mx,stats)
 
 write(*,*) "End of data reached. Goodbye"
 
