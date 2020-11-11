@@ -155,7 +155,7 @@ d_lim = 101.5 ! assuming a cubic volume here of length 203
 
 ! Nested do loops iterate through the data. When conditions are met assigns the
 ! current molecules to a cluster
-time_Loop: do i = 1, 1,1!tsteps, 1
+time_Loop: do i = 1, tsteps, 1
 
 	! Outputs to show that it is still working, will suppress if found to be
 	! excessively expensive
@@ -205,8 +205,7 @@ time_Loop: do i = 1, 1,1!tsteps, 1
 
 		attachment_loop: do k = 1, numMols, 1
 			! cycle if same bead or incorrect type
-			if ((nint(datin(i,k,1)).eq.nint(datin(i,j,1))).or. &
-																					(nint(datin(i,k,2)) .ne. b_type)) then
+			if ((j .eq. k) .or. (nint(datin(i,k,2)) .ne. b_type)) then
 				cycle attachment_loop
 			end if
 
