@@ -28,13 +28,16 @@ numMols = 80000
 first = 0
 
 ! User input and initializations
-write(*,*) "Enter sigma:"
-read(*,*) sigma
+!write(*,*) "Enter sigma:"
+!read(*,*) sigma
+sigma = 3.5
 
 100 write(*,*) "Please enter the name of the file with the data."
 write(*,*) "Typical files will begin with the 'pict' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) filename
+!read(*,*) filename
+
+filename = "pict.s16"
 
 filename = trim(filename)
 
