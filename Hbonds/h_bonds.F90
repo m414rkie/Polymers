@@ -28,16 +28,13 @@ numMols = 80000
 first = 0
 
 ! User input and initializations
-!write(*,*) "Enter sigma:"
-!read(*,*) sigma
-sigma = 3.5
+write(*,*) "Enter sigma:"
+read(*,*) sigma
 
 100 write(*,*) "Please enter the name of the file with the data."
 write(*,*) "Typical files will begin with the 'pict' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
-!read(*,*) filename
-
-filename = "pict.s16"
+read(*,*) filename
 
 filename = trim(filename)
 
@@ -138,7 +135,8 @@ implicit none
 	real,intent(inout) 	:: bonds_out(tsteps,numMols) ! output array
 	real,intent(in)			:: dParam  ! Distance parameter
 
-	integer			:: i, j, k ! Looping integers
+	integer			:: i, j, k, l ! Looping integers
+	integer			:: up_frm, up_to ! update parameters
 	integer			:: b_type = 5 ! type of bead we care about
 	integer			:: bonds, bond_count ! number of bonds found
 	integer			:: old_bond ! holds bond number we are changing if needed.
@@ -156,7 +154,7 @@ d_lim = 101.5 ! assuming a cubic volume here of length 203
 
 ! Nested do loops iterate through the data. When conditions are met assigns the
 ! current molecules to a cluster
-time_Loop: do i = 1, tsteps, 1
+time_Loop: do i = 1, 1,1!tsteps, 1
 
 	! Outputs to show that it is still working, will suppress if found to be
 	! excessively expensive
@@ -202,23 +200,13 @@ time_Loop: do i = 1, tsteps, 1
 			flg = 1
 		end if
 
+		up_frm = 1
+
 		attachment_loop: do k = 1, numMols, 1
 			! cycle if same bead or incorrect type
 			if ((nint(datin(i,k,1)).eq.nint(datin(i,j,1))).or. &
 																					(nint(datin(i,k,2)) .ne. b_type)) then
 				cycle attachment_loop
-			end if
-
-			if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 0)) then
-			! second bead has a bond and first does not
-				cur_bond = int(bonds_out(i,nint(datin(i,k,1))))
-			else if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 1)) then
-			! both beads have a bond, set all beads w/ second bond to first bond
-				old_bond = int(bonds_out(i,nint(datin(i,k,1))))
-				where (bonds_out(i,:) .eq. old_bond) bonds_out(i,:) = cur_bond
-			else if ((bonds_out(i,nint(datin(i,k,1))) .eq. 0) .and. (flg .eq. 0)) then
-			! neither has a bond.
-				cur_bond = bond_count
 			end if
 
 			! assign position variables for second bead
@@ -242,11 +230,32 @@ time_Loop: do i = 1, tsteps, 1
 
 			near = r(dx,dy,dz)
 
-			if (near .le. dParam) then
-				bonds = bonds + 1
-				bonds_out(i,nint(datin(i,j,1))) = cur_bond
-				bonds_out(i,nint(datin(i,k,1))) = cur_bond
+			if (near .gt. dParam) then
+				cycle attachment_loop
 			end if
+
+			if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 0)) then
+			! second bead has a bond and first does not
+				cur_bond = int(bonds_out(i,nint(datin(i,k,1))))
+			else if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 1)) then
+			! both beads have a bond, set all beads w/ second bond to first bond
+				old_bond = int(bonds_out(i,nint(datin(i,k,1))))
+				up_to = k
+				update_loop: do l = up_frm, up_to, 1
+					if (bonds_out(i,nint(datin(i,l,1))) .eq. old_bond) then
+						bonds_out(i,nint(datin(i,l,1))) = cur_bond
+					end if
+				end do update_loop
+				up_frm = up_to
+			else if ((bonds_out(i,nint(datin(i,k,1))) .eq. 0) .and. (flg .eq. 0)) then
+			! neither has a bond.
+				cur_bond = bond_count
+			end if
+
+			bonds_out(i,nint(datin(i,j,1))) = cur_bond
+			bonds_out(i,nint(datin(i,k,1))) = cur_bond
+
+			bonds = bonds + 1
 
 		end do attachment_loop
 

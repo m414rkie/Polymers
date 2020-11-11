@@ -1,0 +1,22 @@
+ Please enter the name of the file with the data.
+ Typical files will begin with the 'pict' prefix.
+ If the file is not in this directory enter the full path.
+ Obtaining macro parameters
+ Number of timesteps found:         101
+ Getting data
+ Determining bonds
+ Sorting output
+ Output 10% complete
+ Output 20% complete
+ Output 30% complete
+ Output 40% complete
+ Output 50% complete
+ Output 60% complete
+ Output 70% complete
+ Output 80% complete
+ Output 90% complete
+ Micelle beads found in h_bonds.dat              
+ Finding Distribution
+ Statistics Output in file 'hh_Averages.dat'
+ Averages sum:   5.89046940E+11
+ End of data reached. Goodbye
