@@ -19,7 +19,7 @@ implicit none
 	integer						:: numTsteps ! Number of time steps looked at
 	integer						:: ioErr, j  ! System error variable, looping integer
 	integer						:: r_num ! The discretized distances that a bead can be.
-	real							:: r_max ! Maximum distance bsad on box size
+	real							:: r_max, dr ! Maximum distance bsad on box size
 	real,allocatable	:: molData(:,:)    ! molnumber, moltype, x, y, z, cluster, molgroup
 	real,allocatable	:: dist_arr(:) ! Holds the values for the radial distance functio.
 	real						 	:: vol, xd, yd, zd ! Values for the box. Volume and largest axial distance
@@ -34,6 +34,7 @@ read(*,*) type
 call chartoup(type,type)
 
 100 write(*,*) "Please enter the name of the file with the data."
+write(*,*) "Typical files will begin with the 'pict' prefix."
 write(*,*) "If the file is not in this directory enter the full path."
 read(*,*) filename
 
@@ -66,10 +67,13 @@ yd = boxDim(2,2) - boxDim(2,1)
 zd = boxDim(3,2) - boxDim(3,1)
 vol = xd*yd*zd
 
-r_max = sqrt((xd**2) + (yd**2) + (zd**2))
+r_max = sqrt(((xd/2.0)**2) + ((yd/2.0)**2) + ((zd/2.0)**2))
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
 r_num = ceiling(r_max)
+
+dr = r_max/float(r_num)
+write(*,*) "Bin Size: ", dr
 
 ! Allocation
 allocate(dist_arr(r_num), stat= ioErr)
@@ -107,7 +111,7 @@ do
 	end do fileread
 
 	! Call distribution subroutine
- 	call rad_dist(moldata,numMols,5,dist_arr,r_num,r_max,vol,xd,yd,zd,tstep,type)
+ 	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd/2,yd/2,zd/2,tstep,type,dr)
 	deallocate(molData)
 
 	! Checks for EOF, if not then reads and discards header data for next step
@@ -127,12 +131,12 @@ end do
 write(*,*) "End of input file reached. Goodbye"
 
 ! Final output
-call dist_print(dist_arr,r_num,r_max,numTsteps,type)
+call dist_print(dist_arr,r_num,dr,numTsteps,type)
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,r_max,vol,xbx,ybx,zbx,t,type)
+subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,vol,xbx,ybx,zbx,t,type,dr)
 ! Subroutine to determine the radial distribution function at each step.
 
 use functions
@@ -143,14 +147,15 @@ implicit none
 	integer,intent(in)		:: r_num ! number of possible bins
 	character*1,intent(in):: type !  bead type
 	real,intent(in)				:: xbx, ybx, zbx ! Maximum axial distance beads can be from each other
-	real,intent(in)				:: vol, t, r_max ! total volume of box, time step, largest dist
+	real,intent(in)				:: dr ! size of the bins
+	real,intent(in)				:: vol, t ! total volume of box, time step, largest dist
 	real,intent(in)				:: arrin(dim1,dim2) ! Input array, holds bead location and type
 																				! molnumber, moltype, x, y, z, cluster, molgroup
 	real,intent(inout)		:: arrout(r_num) ! Holds the values for the radial distribution function
 	real									:: arrout_temp(r_num)  ! holds values for current timestep
-	integer								:: i, d, j  ! Looping integers
+	integer								:: i, d, j, k  ! Looping integers
 	integer								:: count_tot, sh_count ! Holds number of h-bond beads in total total
-	real									:: dr, xi, xj, yi, yj, zi, zj ! increase in radius, x y z coordinate holding
+	real									:: xi, xj, yi, yj, zi, zj ! increase in radius, x y z coordinate holding
 	real									:: xd, yd, zd ! Axial distance of each pair of beads
 	real									:: r, distance ! Distance being considered, distance from i-th particle
 	real									:: shell ! Will hold volume of shell
@@ -170,9 +175,6 @@ end if
 
 ! Initialize temporary array
 arrout_temp = 0.0
-
-! Set shell thickness
-dr = r_max/(float(r_num))
 
 ! Initialize counting variables
 count_tot = 0
@@ -208,11 +210,6 @@ outer_loop : do i = 1, dim1, 1
 						cycle inner_loop
 					end if
 
-					! skip if same chainhalf
-					if (chainEnds(nint(arrin(i,1))) .eq. chainEnds(nint(arrin(j,1)))) then
-						cycle inner_loop
-					end if
-
 					! Bead 2's (x,y,z) coord's
 					xj = arrin(j,3)
 					yj = arrin(j,4)
@@ -237,33 +234,35 @@ outer_loop : do i = 1, dim1, 1
 						zd = zd - zbx
 					end if
 
+					! Determine distance
 					distance = dist(xd,yd,zd)
 
-					! Set bead into correct distance box
-					d = nint(distance)
-
-					! Should not happen, but will prevent crashing in rare cases
-					if (d .gt. r_num) then
-							d = r_num
-					end if
-
-					! Distance box plus one
-					arrout_temp(d) = arrout_temp(d) + 1.0
-					sh_count = sh_count + 1
+					! Place the beads in the appropriate binds
+					bin_loop: do k = 2, r_num, 1
+						! Increase the bin radius until the distance is less than the bin
+						! radius. Place bead in bin before that one.
+						if (distance .le. (float(k)*dr)) then
+							arrout_temp(k-1) = arrout_temp(k-1) + 1
+							sh_count = sh_count + 1
+							exit bin_loop ! exit loop once found.
+						end if
+						! If we don't find an appropriate bin, drop in the last bin
+						arrout_temp(k-1) = arrout_temp(k-1) + 1
+					end do bin_loop
 
 			end do inner_loop
 
 end do outer_loop
 
-! Devide each box by the volume of the shell it represents
+! Divide each box by the volume of the shell it represents
 do d = 1, r_num, 1
 	r = dr*float(d)
-	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
-	arrout_temp(d) = arrout_temp(d)/shell
+	shell = 4.0*pi*dr*(r**2)
+	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
 end do
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
-arrout_temp = arrout_temp*vol/(count_tot*count_tot)
+arrout_temp = arrout_temp*vol/count_tot
 
 
 ! User output
@@ -271,7 +270,7 @@ write(*,*) "total beads of desired type:", count_tot
 write(*,*) "Beads counted:", sh_count
 write(*,*) "Density sum:", sum(arrout_temp)
 
-! Add current array to total array. After all timesteps are checks this will be
+! Add current array to total array. After all timesteps are checked this will be
 ! time-averaged and output
 arrout = arrout + arrout_temp
 
@@ -291,16 +290,16 @@ end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine dist_print(arrin,r_num,max_len,t,btype)
+subroutine dist_print(arrin,r_num,dr,t,btype)
 ! Subroutine to print time-averaged radial distribution function.
 
 implicit none
 	integer				:: r_num, t ! Size of array, number of timesteps
 	real					:: arrin(r_num) ! Array to be time-averaged
-	real					:: max_len ! Largest possible distance
+	real					:: dr !  distance interval
 	character*1		:: btype ! Holds bead of interest, for use in filename
 
-	real					:: r, dr ! Current distance, distance stepsize
+	real					:: r ! Current distance
 	integer				:: i ! Looping integer
 	character*20	:: filename
 
@@ -312,9 +311,6 @@ implicit none
 
 ! Time average, the array contains the sum of all previous distributions
 arrin = arrin/float(t)
-
-! Set step size
-dr = max_len/float(r_num)
 
 ! Open file for printing
 open(unit=18,file=trim(filename),status="replace",position="append")

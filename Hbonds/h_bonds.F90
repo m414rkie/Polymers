@@ -13,20 +13,22 @@ program clusfinder
 implicit none
 	character*50	:: filename
 	real				  :: sigma, tstep
+	real					:: boxDim(3,2)
+	real					:: xd, yd, zd, d_lim
 	integer				:: numMols
 	integer				:: bond_mx ! maximum number of bonds per micelle
 	integer				:: tot_time_steps, num_step
 	integer				:: ioErr, AllErr
-	integer				:: j, first
+	integer				:: j
 	real,allocatable		:: molData(:,:,:) ! time,numMols,(bead,moltype,x,y,z)
 	real,allocatable		:: bonds(:,:) ! time, numMols holds associations
 	integer,allocatable	:: stats(:,:) ! time, numMols holds associations
 
 
 ! Number of beads in the system
-numMols = 80000
+numMols = 80002
+! maximum size of a micelle we are considering
 bond_mx = 100
-first = 0
 
 ! User input and initializations
 write(*,*) "Enter sigma:"
@@ -49,14 +51,18 @@ end if
 ! get macro parameters
 tot_time_steps = 0
 write(*,*) "Obtaining macro parameters"
-! Reads in the data
+! Reads in the macro data
 read_loop: do
 
 	read(15,*,END=101)
 	read(15,*) tstep
 	read(15,*)
 	read(15,*) numMols
-	read(15,*); read(15,*); read(15,*); read(15,*); read(15,*);
+	read(15,*)
+	read(15,*) boxDim(1,1), boxDim(1,2)
+	read(15,*) boxDim(2,1), boxDim(2,2)
+	read(15,*) boxDim(3,1), boxDim(3,2)
+  read(15,*)
 	tot_time_steps = tot_time_steps + 1
 
 
@@ -66,6 +72,13 @@ read_loop: do
 
 end do read_loop
 101 close(15)
+
+xd = boxDim(1,2) - boxDim(1,1)
+yd = boxDim(2,2) - boxDim(2,1)
+zd = boxDim(3,2) - boxDim(3,1)
+
+! Assumes a cubic box
+d_lim = 0.5*xd
 
 write(*,*) "Number of timesteps found:", tot_time_steps
 write(*,*) "Getting data"
@@ -115,7 +128,7 @@ end do data_collect
 102 close(15)
 
 write(*,*) "Determining bonds"
-call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma)
+call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma,d_lim)
 write(*,*) "Sorting output"
 call output(tot_time_steps,numMols,bonds,stats)
 write(*,*) "Finding Distribution"
@@ -126,7 +139,7 @@ write(*,*) "End of data reached. Goodbye"
 end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine clusSort(tsteps,numMols,vals,datin,bonds_out,dParam)
+subroutine clusSort(tsteps,numMols,vals,datin,bonds_out,dParam,d_lim)
 ! Subroutine to determine which molecules of the appropriate type are
 ! joined together in a bond.
 
@@ -134,16 +147,17 @@ implicit none
 	integer,intent(in)	:: tsteps,numMols,vals ! Dimensions of input array
 	real,intent(in) 		:: datin(tsteps,numMols,vals) ! Input array
 	real,intent(inout) 	:: bonds_out(tsteps,numMols) ! output array
-	real,intent(in)			:: dParam  ! Distance parameter
+	real,intent(in)			:: dParam, d_lim  ! Distance parameter
 
 	integer			:: i, j, k, l ! Looping integers
+	integer			:: b1, b2, b3 ! holding variables for bead number
 	integer			:: up_frm, up_to ! update parameters
 	integer			:: b_type = 5 ! type of bead we care about
 	integer			:: bonds, bond_count ! number of bonds found
 	integer			:: old_bond ! holds bond number we are changing if needed.
 	integer			:: cur_bond, flg ! bond number being assigned, flg if bond exists
 	real				:: x1,x2, y1,y2, z1,z2 ! xyz positions
-	real				:: dx, dy, dz, d_lim ! axial distances and the max distance
+	real				:: dx, dy, dz ! axial distances
 	real				:: near ! distance between two beads
 	real				:: r, a, b, c ! function variables
 
@@ -151,14 +165,11 @@ implicit none
 ! simple 3d distance formula
 r(a,b,c) = sqrt((a)**2 + (b)**2 + (c)**2)
 
-d_lim = 101.5 ! assuming a cubic volume here of length 203
-
 ! Nested do loops iterate through the data. When conditions are met assigns the
 ! current molecules to a cluster
 time_Loop: do i = 1, tsteps, 1
 
-	! Outputs to show that it is still working, will suppress if found to be
-	! excessively expensive
+	! Outputs to show that it is still working
 	if (i .eq. floor(0.1*real(tsteps))) then
 		write(*,*) "Clustering 10% complete"
 	else if (i .eq. floor(0.2*real(tsteps))) then
@@ -186,6 +197,7 @@ time_Loop: do i = 1, tsteps, 1
 	bond_loop: do j = 1, numMols, 1
 		bonds = 0
 		flg = 0
+		b1 = nint(datin(i,j,1))
 		! cycle if not the correct bead type
 		if (nint(datin(i,j,2)) .ne. b_type) then
 			cycle bond_loop
@@ -196,16 +208,21 @@ time_Loop: do i = 1, tsteps, 1
 		z1 = datin(i,j,5)
 
 		! if already in a bond group get that bond group
-		if (bonds_out(i,nint(datin(i,j,1))) .ne. 0) then
-			cur_bond = int(bonds_out(i,nint(datin(i,j,1))))
+		if (bonds_out(i,b1) .ne. 0) then
+			cur_bond = int(bonds_out(i,b1))
 			flg = 1
+		else
+			flg = 0
 		end if
 
-		up_frm = 1
+		up_frm = 1 ! reset update loop counter
 
 		attachment_loop: do k = 1, numMols, 1
+
+			b2 = nint(datin(i,k,1))
+
 			! cycle if same bead or incorrect type
-			if ((j .eq. k) .or. (nint(datin(i,k,2)) .ne. b_type)) then
+			if ((b1 .eq. b2) .or. (nint(datin(i,k,2)) .ne. b_type)) then
 				cycle attachment_loop
 			end if
 
@@ -234,26 +251,28 @@ time_Loop: do i = 1, tsteps, 1
 				cycle attachment_loop
 			end if
 
-			if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 0)) then
+			if ((bonds_out(i,b2) .ne. 0) .and. (flg .eq. 0)) then
 			! second bead has a bond and first does not
-				cur_bond = int(bonds_out(i,nint(datin(i,k,1))))
-			else if ((bonds_out(i,nint(datin(i,k,1))) .ne. 0) .and. (flg .eq. 1)) then
+				cur_bond = int(bonds_out(i,b2))
+			else if ((bonds_out(i,b2) .ne. 0) .and. (flg .eq. 1)) then
 			! both beads have a bond, set all beads w/ second bond to first bond
-				old_bond = int(bonds_out(i,nint(datin(i,k,1))))
+				old_bond = int(bonds_out(i,b2))
 				up_to = k
 				update_loop: do l = up_frm, up_to, 1
-					if (bonds_out(i,nint(datin(i,l,1))) .eq. old_bond) then
-						bonds_out(i,nint(datin(i,l,1))) = cur_bond
+					b3 = nint(datin(i,l,1))
+					if (bonds_out(i,b3) .eq. old_bond) then
+						bonds_out(i,b3) = cur_bond
 					end if
 				end do update_loop
 				up_frm = up_to
-			else if ((bonds_out(i,nint(datin(i,k,1))) .eq. 0) .and. (flg .eq. 0)) then
+			else if ((bonds_out(i,b2) .eq. 0) .and. (flg .eq. 0)) then
 			! neither has a bond.
 				cur_bond = bond_count
 			end if
 
-			bonds_out(i,nint(datin(i,j,1))) = cur_bond
-			bonds_out(i,nint(datin(i,k,1))) = cur_bond
+			! final assignment to a micelle
+			bonds_out(i,b1) = cur_bond
+			bonds_out(i,b2) = cur_bond
 
 			bonds = bonds + 1
 
@@ -314,6 +333,7 @@ time_loop: do i = 1, tsteps, 1
 		write(*,*) "Output 90% complete"
 	end if
 
+	write(19,*)
 	write(19,*) "Timestep: ", i
 	max_bonds = nint(maxval(bonds(i,:)))
 	write(19,*) "Bonds: ", max_bonds
@@ -321,13 +341,12 @@ time_loop: do i = 1, tsteps, 1
 	! iterate through the clusters
 	cluster_loop: do j = 1, max_bonds, 1
 		count = 0
-		bead_loop: do k = 1, numMols, 1
 
+		bead_loop: do k = 1, numMols, 1
 			if (bonds(i,k) .eq. j) then
 				write(19,'(1i6, " ")',ADVANCE='no') k
 				count = count + 1
 			end if
-
 		end do bead_loop
 
 		if (count .eq. 0) then
@@ -339,9 +358,9 @@ time_loop: do i = 1, tsteps, 1
 		end if
 
 		if (count .ge. 100) then
-			micelle_bins(i,100) = 	micelle_bins(i,100) + 1
+			micelle_bins(i,100) =	micelle_bins(i,100) + 1
 		else
-			micelle_bins(i,count) = 	micelle_bins(i,count) + 1
+			micelle_bins(i,count) =	micelle_bins(i,count) + 1
 		end if
 
 	end do cluster_loop
