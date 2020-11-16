@@ -11,15 +11,17 @@
 program clusfinder
 
 implicit none
-	character*50	:: filename
+	character*50, allocatable	:: file_arr(:)
+	character*50							:: raw_in
 	real				  :: sigma, tstep
 	real					:: boxDim(3,2)
 	real					:: xd, yd, zd, d_lim
 	integer				:: numMols
+	integer				:: num_files
 	integer				:: bond_mx ! maximum number of bonds per micelle
 	integer				:: tot_time_steps, num_step
 	integer				:: ioErr, AllErr
-	integer				:: j
+	integer				:: j, k
 	real,allocatable		:: molData(:,:,:) ! time,numMols,(bead,moltype,x,y,z)
 	real,allocatable		:: bonds(:,:) ! time, numMols holds associations
 	integer,allocatable	:: stats(:,:) ! time, numMols holds associations
@@ -34,44 +36,63 @@ bond_mx = 100
 write(*,*) "Enter sigma:"
 read(*,*) sigma
 
-100 write(*,*) "Please enter the name of the file with the data."
-write(*,*) "Typical files will begin with the 'pict' prefix."
-write(*,*) "If the file is not in this directory enter the full path."
-read(*,*) filename
+write(*,*) "Please enter the number of files."
+read(*,*) num_files
 
-filename = trim(filename)
-
-open(unit=15, file=filename, status="old", action="read", iostat=ioErr)
-
-if (ioErr .ne. 0) then
-	write(*,*) "File not found, please try again."
-	goto 100
+allocate(file_arr(num_files), stat=AllErr)
+if (AllErr .ne. 0) then
+	write(*,*) "Allocation of file name array has failed. Exiting."
+	stop
 end if
+file_in: do k = 1, num_files, 1
+	100	write(*,*) "Typical files will begin with the 'pict' prefix."
+	write(*,*) "If the file is not in this directory enter the full path."
+	write(*,*) "Enter the name of file", k
+	read(*,*) raw_in
+
+	open(unit=15, file=trim(raw_in), status="old", action="read", iostat=ioErr)
+
+	if (ioErr .ne. 0) then
+		write(*,*) "File not found, please try again."
+		goto 100
+	end if
+
+	close(15)
+	file_arr(k) = trim(raw_in)
+
+end do file_in
 
 ! get macro parameters
 tot_time_steps = 0
 write(*,*) "Obtaining macro parameters"
 ! Reads in the macro data
-read_loop: do
+file_macro_iter: do k = 1, num_files, 1
+	open(unit=15, file=file_arr(k), status="old", action="read", iostat=ioErr)
+	if (ioErr .ne. 0) then
+		write(*,*) "Failed to open file #", k, "Exiting"
+		stop
+	end if
+	read_loop: do
 
-	read(15,*,END=101)
-	read(15,*) tstep
-	read(15,*)
-	read(15,*) numMols
-	read(15,*)
-	read(15,*) boxDim(1,1), boxDim(1,2)
-	read(15,*) boxDim(2,1), boxDim(2,2)
-	read(15,*) boxDim(3,1), boxDim(3,2)
-  read(15,*)
-	tot_time_steps = tot_time_steps + 1
-
-
-	pass_loop: do j = 1, numMols, 1
+		read(15,*,END=101)
+		read(15,*) tstep
 		read(15,*)
-	end do pass_loop
+		read(15,*) numMols
+		read(15,*)
+		read(15,*) boxDim(1,1), boxDim(1,2)
+		read(15,*) boxDim(2,1), boxDim(2,2)
+		read(15,*) boxDim(3,1), boxDim(3,2)
+	  read(15,*)
+		tot_time_steps = tot_time_steps + 1
 
-end do read_loop
-101 close(15)
+
+		pass_loop: do j = 1, numMols, 1
+			read(15,*)
+		end do pass_loop
+
+	end do read_loop
+	101 close(15)
+end do file_macro_iter
 
 xd = boxDim(1,2) - boxDim(1,1)
 yd = boxDim(2,2) - boxDim(2,1)
@@ -106,26 +127,31 @@ if (AllErr .ne. 0) then
 end if
 stats = 0
 
-! collect the data
-open(unit=15, file=filename, status="old", action="read", iostat=ioErr)
 num_step = 0
-data_collect: do
+! collect the data
+file_data_in: do k = 1, num_files, 1
+	open(unit=15, file=file_arr(k), status="old", action="read", iostat=ioErr)
+	if (ioErr .ne. 0) then
+		write(*,*) "Failed to open file #", k, "Exiting"
+		stop
+	end if
+	data_collect: do
 
-	read(15,*,END=102)
-	read(15,*) tstep
-	read(15,*)
-	read(15,*) numMols
-	read(15,*); read(15,*); read(15,*); read(15,*); read(15,*);
-	num_step = num_step + 1
+		read(15,*,END=102)
+		read(15,*) tstep
+		read(15,*)
+		read(15,*) numMols
+		read(15,*); read(15,*); read(15,*); read(15,*); read(15,*);
+		num_step = num_step + 1
 
+		input_loop: do j = 1, numMols, 1
+			read(15,*) molData(num_step,j,1), molData(num_step,j,2) , &
+				molData(num_step,j,3), molData(num_step,j,4), molData(num_step,j,5)
+		end do input_loop
 
-	input_loop: do j = 1, numMols, 1
-		read(15,*) molData(num_step,j,1), molData(num_step,j,2) , &
-			molData(num_step,j,3), molData(num_step,j,4), molData(num_step,j,5)
-	end do input_loop
-
-end do data_collect
-102 close(15)
+	end do data_collect
+	102 close(15)
+end do file_data_in
 
 write(*,*) "Determining bonds"
 call clusSort(tot_time_steps,numMols,5,molData,bonds,sigma,d_lim)
