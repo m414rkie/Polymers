@@ -1,7 +1,7 @@
 ! Program takes an output file from the LAMMPS software package and
 ! reads in the location and type of each molecule. From this, this
 ! program attempts to determine which beads of type 5 (H) are bonded in a
-! pair-wise fashion.
+! micelle
 
 ! This version does not track chains, only beads
 

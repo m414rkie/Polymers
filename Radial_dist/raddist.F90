@@ -70,7 +70,7 @@ vol = xd*yd*zd
 r_max = sqrt(((xd/2.0)**2) + ((yd/2.0)**2) + ((zd/2.0)**2))
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
-r_num = ceiling(r_max)
+r_num = ceiling(2.0*r_max)
 
 dr = r_max/float(r_num)
 write(*,*) "Bin Size: ", dr
@@ -184,8 +184,8 @@ sh_count = 0
 outer_loop : do i = 1, dim1, 1
 
 		! skip if not right bead type
-		if (arrin(i,2) .ne. b_type) then
-			if (arrin(i,2) .ne. b_type2) then
+		if (nint(arrin(i,2)) .ne. b_type) then
+			if (nint(arrin(i,2)) .ne. b_type2) then
 				cycle outer_loop
 			end if
 		end if
@@ -202,8 +202,10 @@ outer_loop : do i = 1, dim1, 1
 			inner_loop : do j = 1, dim1, 1
 
 					! skip if not right bead type
-					if ((nint(arrin(j,2)) .ne. b_type).and.(nint(arrin(j,2)) .ne. b_type2)) then
+					if (nint(arrin(j,2)) .ne. b_type) then
+						if (nint(arrin(j,2)) .ne. b_type2) then
 							cycle inner_loop
+						end if
 					end if
 
 					if (j .eq. i) then
@@ -238,7 +240,7 @@ outer_loop : do i = 1, dim1, 1
 					distance = dist(xd,yd,zd)
 
 					! Place the beads in the appropriate binds
-					bin_loop: do k = 2, r_num, 1
+					bin_loop: do k = 2, r_num+1, 1
 						! Increase the bin radius until the distance is less than the bin
 						! radius. Place bead in bin before that one.
 						if (distance .le. (float(k)*dr)) then
@@ -247,7 +249,9 @@ outer_loop : do i = 1, dim1, 1
 							exit bin_loop ! exit loop once found.
 						end if
 						! If we don't find an appropriate bin, drop in the last bin
-						arrout_temp(k-1) = arrout_temp(k-1) + 1
+						if (k .eq. (r_num+1)) then
+							arrout_temp(k-1) = arrout_temp(k-1) + 1
+						end if
 					end do bin_loop
 
 			end do inner_loop
@@ -257,7 +261,7 @@ end do outer_loop
 ! Divide each box by the volume of the shell it represents
 do d = 1, r_num, 1
 	r = dr*float(d)
-	shell = 4.0*pi*dr*(r**2)
+	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
 	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
 end do
 
