@@ -417,6 +417,7 @@ implicit none
 	real		  :: mean, std_dev, variance, mean_t ! no singles
 	real		  :: numavg(lrg_track) ! For printing
 	real			:: summed
+	real			:: avg_clusters
 
 num = 0
 mean = 0
@@ -481,7 +482,8 @@ write(13,*) "Total Time Steps: ", num_tsteps
 write(13,*) "Average Micelle Size: ", mean_t
 write(13,*) "Std devation of Cluster Size: ", sz_std_dev_tot/float(num_tsteps)
 write(13,*) "Std devation of Mean Over Time: ", std_dev
-write(13,*) "Avg. Number of Clusters: ", (n_tot)/float(num_tsteps)
+avg_clusters = (n_tot)/float(num_tsteps)
+write(13,*) "Avg. Number of Clusters: ", avg_clusters
 ! Output for box plot
 write(13,*) "Box Plot"
 do i = 1, lrg_track, 1
@@ -490,4 +492,11 @@ do i = 1, lrg_track, 1
 end do
 close(13)
 write(*,*) "Averages sum:",summed
+
+open(unit=14,file='micelle_prob.dat',status='replace',position='append')
+do i = 1, lrg_track, 1
+	write(14,*) i, numavg(i)/avg_clusters
+end do
+close(13)
+
 end subroutine
