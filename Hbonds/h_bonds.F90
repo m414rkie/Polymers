@@ -178,7 +178,7 @@ implicit none
 	integer			:: i, j, k, l ! Looping integers
 	integer			:: b1, b2, b3 ! holding variables for bead number
 	integer			:: up_frm, up_to ! update parameters
-	integer			:: b_type = 3 ! type of bead we care about
+	integer			:: b_type = 5 ! type of bead we care about
 	integer			:: bonds, bond_count ! number of bonds found
 	integer			:: old_bond ! holds bond number we are changing if needed.
 	integer			:: cur_bond, flg ! bond number being assigned, flg if bond exists
