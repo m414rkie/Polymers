@@ -327,7 +327,7 @@ implicit none
 	character*50				:: file_out, file_out_clus ! names of output files
 	integer							:: looped, linear ! looped and linear clusters at a time
 	integer							:: end_a, end_b ! ends of the chain.
-	integer							:: cluster_chains(100) ! holds which chains are in a cluster
+	integer							:: cluster_chains(num_chains) ! holds which chains are in a cluster
 	integer							:: tot_looped, tot_linear ! total # of looped, linear
 	integer							:: tot_clusters ! local and total clusters
 	integer							:: num_clus ! number of clusters at a timestep
