@@ -184,9 +184,11 @@ end do file_input
 write(*,*) "Building Clusters"
 call ClusBuilder(tot_bonds,3,tot_time_steps,numChains,bead_pairs,bond_time, &
 																									chainTrack,chain_ends,percent)
-write(*,*) "Preparing Outputs"
+write(*,*) "Preparing Looped Outputs"
 call linloop(numChains,tot_time_steps,chainTrack,chain_ends)
+write(*,*) "Outputting Time Information"
 call output(tot_time_steps,numChains,lrg_track,chainTrack,statsArr)
+write(*,*) "Outputting Statistical Information"
 call statistics(tot_time_steps,lrg_track,statsArr,percent)
 
 write(*,*) "Number of timesteps checked:", tot_time_steps
