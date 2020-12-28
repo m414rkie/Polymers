@@ -67,13 +67,12 @@ yd = boxDim(2,2) - boxDim(2,1)
 zd = boxDim(3,2) - boxDim(3,1)
 vol = xd*yd*zd
 
-r_max = sqrt(((xd/2.0)**2) + ((yd/2.0)**2) + ((zd/2.0)**2))
+r_max = sqrt(((xd*0.5)**2) + ((yd*0.5)**2) + ((zd*0.5)**2))
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
-r_num = ceiling(2.0*r_max)
-
-dr = r_max/float(r_num)
-write(*,*) "Bin Size: ", dr
+dr = 0.5
+r_num = ceiling(r_max/dr)
+write(*,*) "Bin Size: ", dr, r_num, r_max
 
 ! Allocation
 allocate(dist_arr(r_num), stat= ioErr)
@@ -111,7 +110,7 @@ do
 	end do fileread
 
 	! Call distribution subroutine
- 	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd/2,yd/2,zd/2,tstep,type,dr)
+ 	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd*0.5,yd*0.5,zd*0.5,tstep,type,dr)
 	deallocate(molData)
 
 	! Checks for EOF, if not then reads and discards header data for next step
@@ -172,6 +171,8 @@ else if (type .eq. 'S') then
 	b_type = 3
 	b_type2 = 1
 end if
+
+write(*,*) xbx, r_num
 
 ! Initialize temporary array
 arrout_temp = 0.0
@@ -239,20 +240,9 @@ outer_loop : do i = 1, dim1, 1
 					! Determine distance
 					distance = dist(xd,yd,zd)
 
-					! Place the beads in the appropriate binds
-					bin_loop: do k = 2, r_num+1, 1
-						! Increase the bin radius until the distance is less than the bin
-						! radius. Place bead in bin before that one.
-						if (distance .le. (float(k)*dr)) then
-							arrout_temp(k-1) = arrout_temp(k-1) + 1
-							sh_count = sh_count + 1
-							exit bin_loop ! exit loop once found.
-						end if
-						! If we don't find an appropriate bin, drop in the last bin
-						if (k .eq. (r_num+1)) then
-							arrout_temp(k-1) = arrout_temp(k-1) + 1
-						end if
-					end do bin_loop
+					! Place the beads in the appropriate bins
+					k = ceiling(distance/dr)
+					arrout_temp(k) = arrout_temp(k) + 1
 
 			end do inner_loop
 
@@ -262,17 +252,15 @@ end do outer_loop
 do d = 1, r_num, 1
 	r = dr*float(d)
 	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
-	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
+	arrout_temp(d) = arrout_temp(d)/shell
 end do
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
 arrout_temp = arrout_temp*vol/count_tot
 
-
 ! User output
 write(*,*) "total beads of desired type:", count_tot
 write(*,*) "Beads counted:", sh_count
-write(*,*) "Density sum:", sum(arrout_temp)
 
 ! Add current array to total array. After all timesteps are checked this will be
 ! time-averaged and output
