@@ -67,11 +67,11 @@ yd = boxDim(2,2) - boxDim(2,1)
 zd = boxDim(3,2) - boxDim(3,1)
 vol = xd*yd*zd
 
-r_max = sqrt(((xd*0.5)**2) + ((yd*0.5)**2) + ((zd*0.5)**2))
+r_max = xd*0.5
 
 ! Determine number of boxes for rad. distribution array. Assumes a cube
 dr = 0.5
-r_num = ceiling(r_max/dr)
+r_num = ceiling(r_max/dr) + 1
 write(*,*) "Bin Size: ", dr, r_num, r_max
 
 ! Allocation
@@ -88,7 +88,7 @@ dist_arr = 0.0
 do
   ! Iterate timestep
 	numTsteps = numTsteps + 1
-
+	write(*,*) "aa"
 	! Allocate data array
 	allocate(molData(numMols,5), stat = ioErr)
 
@@ -110,8 +110,11 @@ do
 	end do fileread
 
 	! Call distribution subroutine
- 	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd*0.5,yd*0.5,zd*0.5,tstep,type,dr)
+ 	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd*0.5,yd*0.5,zd*0.5,type,dr)
+	write(*,*) "bb"
+
 	deallocate(molData)
+	write(*,*) "cc"
 
 	! Checks for EOF, if not then reads and discards header data for next step
 	read(15,*,END=101)
@@ -135,7 +138,7 @@ end program
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,vol,xbx,ybx,zbx,t,type,dr)
+subroutine rad_dist(arrin,dim1,dim2,arrout,r_num,vol,xbx,ybx,zbx,type,dr)
 ! Subroutine to determine the radial distribution function at each step.
 
 use functions
@@ -147,14 +150,14 @@ implicit none
 	character*1,intent(in):: type !  bead type
 	real,intent(in)				:: xbx, ybx, zbx ! Maximum axial distance beads can be from each other
 	real,intent(in)				:: dr ! size of the bins
-	real,intent(in)				:: vol, t ! total volume of box, time step, largest dist
+	real,intent(in)				:: vol ! total volume of box, time step
 	real,intent(in)				:: arrin(dim1,dim2) ! Input array, holds bead location and type
 																				! molnumber, moltype, x, y, z, cluster, molgroup
 	real,intent(inout)		:: arrout(r_num) ! Holds the values for the radial distribution function
 	real									:: arrout_temp(r_num)  ! holds values for current timestep
 	integer								:: i, d, j, k  ! Looping integers
-	integer								:: count_tot, sh_count ! Holds number of h-bond beads in total total
-	real									:: xi, xj, yi, yj, zi, zj ! increase in radius, x y z coordinate holding
+	integer								:: count_tot ! Holds number of beads in total
+	real									:: xi, xj, yi, yj, zi, zj ! coordinates of beads 1, 2
 	real									:: xd, yd, zd ! Axial distance of each pair of beads
 	real									:: r, distance ! Distance being considered, distance from i-th particle
 	real									:: shell ! Will hold volume of shell
@@ -171,6 +174,7 @@ else if (type .eq. 'S') then
 	b_type = 3
 	b_type2 = 1
 end if
+	write(*,*) "dd"
 
 write(*,*) xbx, r_num
 
@@ -179,7 +183,6 @@ arrout_temp = 0.0
 
 ! Initialize counting variables
 count_tot = 0
-sh_count = 0
 
 ! Bead being considered
 outer_loop : do i = 1, dim1, 1
@@ -200,7 +203,7 @@ outer_loop : do i = 1, dim1, 1
 		zi = arrin(i,5)
 
 			! Loop for second bead
-			inner_loop : do j = 1, dim1, 1
+			inner_loop : do j = i, dim1, 1
 
 					! skip if not right bead type
 					if (nint(arrin(j,2)) .ne. b_type) then
@@ -242,25 +245,27 @@ outer_loop : do i = 1, dim1, 1
 
 					! Place the beads in the appropriate bins
 					k = ceiling(distance/dr)
-					arrout_temp(k) = arrout_temp(k) + 1
+					if (k .le. r_num*0.5) arrout_temp(k) = arrout_temp(k) + 1
 
 			end do inner_loop
 
 end do outer_loop
 
+write(*,*) "Number of pairs counted: ", sum(arrout_temp)
+
 ! Divide each box by the volume of the shell it represents
 do d = 1, r_num, 1
 	r = dr*float(d)
 	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
-	arrout_temp(d) = arrout_temp(d)/shell
+	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
 end do
+	write(*,*) "ee"
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
 arrout_temp = arrout_temp*vol/count_tot
 
 ! User output
 write(*,*) "total beads of desired type:", count_tot
-write(*,*) "Beads counted:", sh_count
 
 ! Add current array to total array. After all timesteps are checked this will be
 ! time-averaged and output
@@ -268,8 +273,6 @@ arrout = arrout + arrout_temp
 
 ! Print current distribution function to file
 open(unit=20,file=trim(filename),status="unknown",position="append")
-
-write(*,*) "radial distribution function, at time", t
 
 do d = 1, r_num, 1
 	r = dr*float(d)
