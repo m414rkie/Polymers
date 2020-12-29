@@ -88,7 +88,7 @@ dist_arr = 0.0
 do
   ! Iterate timestep
 	numTsteps = numTsteps + 1
-	write(*,*) "aa"
+
 	! Allocate data array
 	allocate(molData(numMols,5), stat = ioErr)
 
@@ -111,10 +111,8 @@ do
 
 	! Call distribution subroutine
  	call rad_dist(moldata,numMols,5,dist_arr,r_num,vol,xd*0.5,yd*0.5,zd*0.5,type,dr)
-	write(*,*) "bb"
 
 	deallocate(molData)
-	write(*,*) "cc"
 
 	! Checks for EOF, if not then reads and discards header data for next step
 	read(15,*,END=101)
@@ -174,7 +172,6 @@ else if (type .eq. 'S') then
 	b_type = 3
 	b_type2 = 1
 end if
-	write(*,*) "dd"
 
 write(*,*) xbx, r_num
 
@@ -259,7 +256,6 @@ do d = 1, r_num, 1
 	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
 	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
 end do
-	write(*,*) "ee"
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
 arrout_temp = arrout_temp*vol/count_tot
