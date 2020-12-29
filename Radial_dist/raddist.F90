@@ -242,7 +242,7 @@ outer_loop : do i = 1, dim1, 1
 
 					! Place the beads in the appropriate bins
 					k = ceiling(distance/dr)
-					if (k .le. r_num*0.5) arrout_temp(k) = arrout_temp(k) + 1
+					if (k .le. r_num*0.75) arrout_temp(k) = arrout_temp(k) + 1
 
 			end do inner_loop
 
