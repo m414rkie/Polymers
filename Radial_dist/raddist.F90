@@ -241,14 +241,15 @@ outer_loop : do i = 1, dim1, 1
 					distance = dist(xd,yd,zd)
 
 					! Place the beads in the appropriate bins
-					k = ceiling(distance/dr)
-					if (k .le. r_num*0.95) arrout_temp(k) = arrout_temp(k) + 1
+					k = int(distance/dr) + 1
+					if (k .le. r_num*0.95) arrout_temp(k) = arrout_temp(k) + 2
 
 			end do inner_loop
 
 end do outer_loop
 
 write(*,*) "Number of pairs counted: ", sum(arrout_temp)
+arrout_temp = arrout_temp/count_tot
 
 ! Divide each box by the volume of the shell it represents
 do d = 1, r_num, 1
