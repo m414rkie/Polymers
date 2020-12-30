@@ -192,7 +192,6 @@ outer_loop : do i = 1, dim1, 1
 		end if
 
 		! Add bead to total number of beads
-		count_tot = count_tot + 1
 
 		! Bead 1's (x,y,z) coord's
 		xi = arrin(i,3)
@@ -241,8 +240,11 @@ outer_loop : do i = 1, dim1, 1
 					distance = dist(xd,yd,zd)
 
 					! Place the beads in the appropriate bins
-					k = int(distance/dr) + 1
-					if (k .le. r_num*0.95) arrout_temp(k) = arrout_temp(k) + 2
+					k = ceiling(distance/dr)
+					if (k .le. ceiling(r_num*0.5)) then
+						arrout_temp(k) = arrout_temp(k) + 2
+						count_tot = count_tot + 1
+					end if
 
 			end do inner_loop
 
