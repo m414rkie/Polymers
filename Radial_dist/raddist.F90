@@ -253,8 +253,8 @@ write(*,*) "Number of pairs counted: ", sum(arrout_temp)
 ! Divide each box by the volume of the shell it represents
 do d = 1, r_num, 1
 	r = dr*float(d)
-	shell = 1.3333*pi*(((r+dr)**3) - (r**3))
-	arrout_temp(d) = arrout_temp(d)/(shell*count_tot)
+	shell = 4.0*pi*r*r*dr
+	arrout_temp(d) = arrout_temp(d)/(shell)
 end do
 
 ! Normalize, divide by overall density of box (concerning only the beads we care about)
