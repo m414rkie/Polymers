@@ -192,6 +192,7 @@ outer_loop : do i = 1, dim1, 1
 		end if
 
 		! Add bead to total number of beads
+		count_tot = count_tot + 1
 
 		! Bead 1's (x,y,z) coord's
 		xi = arrin(i,3)
@@ -243,7 +244,6 @@ outer_loop : do i = 1, dim1, 1
 					k = ceiling(distance/dr)
 					if (k .le. ceiling(r_num*0.5)) then
 						arrout_temp(k) = arrout_temp(k) + 2
-						count_tot = count_tot + 1
 					end if
 
 			end do inner_loop
@@ -273,7 +273,7 @@ arrout = arrout + arrout_temp
 ! Print current distribution function to file
 open(unit=20,file=trim(filename),status="unknown",position="append")
 
-do d = 1, r_num, 1
+do d = 1, ceiling(r_num*0.5), 1
 	r = dr*float(d)
 	write(20,*) r, arrout_temp(d)
 end do
